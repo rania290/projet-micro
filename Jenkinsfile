@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18-bullseye'
+            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
@@ -17,12 +22,17 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                echo '🛠️ Vérification de l\'environnement...'
+                echo '🛠️ Configuration de l\'environnement...'
                 sh '''
+                    # Installer Docker CLI si nécessaire
+                    if ! command -v docker &> /dev/null; then
+                        apt-get update && apt-get install -y docker.io
+                    fi
+
                     # Afficher les versions
-                    echo "Node: $(node --version 2>/dev/null || echo 'non installé')"
-                    echo "NPM: $(npm --version 2>/dev/null || echo 'non installé')"
-                    echo "Docker: $(docker --version 2>/dev/null || echo 'non installé')"
+                    echo "Node: $(node --version)"
+                    echo "NPM: $(npm --version)"
+                    echo "Docker: $(docker --version)"
                 '''
             }
         }
@@ -86,12 +96,13 @@ pipeline {
             steps {
                 echo '📝 Mise à jour du chart Helm...'
                 sh '''
-                    # Mettre à jour les tags d'image dans values.yaml
+                    # Mettre à jour les repositories et tags d'image dans values.yaml
+                    sed -i "s/repository: projet-micro-/repository: ${DOCKER_REGISTRY}\\/projet-micro-/g" helm/social-network/values.yaml
                     sed -i "s/tag: \"latest\"/tag: \"${BUILD_NUMBER}\"/g" helm/social-network/values.yaml
 
                     # Commit et push les changements
                     git add helm/social-network/values.yaml
-                    git commit -m "Update image tags to ${BUILD_NUMBER}"
+                    git commit -m "Update image repositories and tags to ${BUILD_NUMBER}"
                     git push origin HEAD:main
                 '''
             }
