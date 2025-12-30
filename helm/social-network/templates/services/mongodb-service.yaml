@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "social-network.fullname" . }}-mongodb
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mongodb
+spec:
+  type: {{ .Values.mongodb.service.type }}
+  ports:
+  - port: {{ .Values.mongodb.port }}
+    targetPort: {{ .Values.mongodb.port }}
+    protocol: TCP
+    name: mongodb
+  selector:
+    {{- include "social-network.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mongodb

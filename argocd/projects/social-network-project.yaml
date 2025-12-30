@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: social-network-project
+  namespace: argocd
+spec:
+  description: Social Network Microservices Project
+  sourceRepos:
+    - '*'
+  destinations:
+    - namespace: social-network
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

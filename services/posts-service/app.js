@@ -17,10 +17,22 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/social-ne
     useUnifiedTopology: true
 });
 
-// Kafka configuration
+mongoose.connection.on('connected', () => {
+    console.log('Connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('MongoDB connection error:', err);
+});
+
+// Kafka configuration - CORRECTION ICI
+// Utilisez la variable d'environnement ou le nom du service Docker
+const kafkaBrokers = process.env.KAFKA_BROKERS || 'kafka:29092';
+console.log(`Connecting to Kafka brokers: ${kafkaBrokers}`);
+
 const kafka = new Kafka({
     clientId: 'posts-service',
-    brokers: ['localhost:9092']
+    brokers: [kafkaBrokers]
 });
 
 const producer = kafka.producer();
@@ -53,6 +65,11 @@ const PostSchema = new mongoose.Schema({
 });
 
 const Post = mongoose.model('Post', PostSchema);
+
+// Route de santé pour le healthcheck Docker
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', service: 'posts-service' });
+});
 
 // Routes
 // Get all posts
@@ -131,6 +148,7 @@ app.post('/posts/:id/like', async (req, res) => {
 
         res.json({ likes: post.likes });
     } catch (error) {
+        console.error('Error liking post:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -164,27 +182,10 @@ app.post('/posts/:id/comments', async (req, res) => {
 
         res.status(201).json(post.comments[post.comments.length - 1]);
     } catch (error) {
+        console.error('Error adding comment:', error);
         res.status(500).json({ error: error.message });
     }
 });
-
-// Get all posts (for testing)
-app.get('/posts', async (req, res) => {
-    try {
-        const posts = await Post.find().sort({ createdAt: -1 });
-        res.json(posts);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Startup
-async function startServer() {
-    await producer.connect();
-    app.listen(PORT, () => {
-        console.log(`Posts service running on port ${PORT}`);
-    });
-}
 
 // Stories endpoints
 app.post('/stories', async (req, res) => {
@@ -208,6 +209,7 @@ app.post('/stories', async (req, res) => {
 
         res.status(201).json(story);
     } catch (error) {
+        console.error('Error creating story:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -220,6 +222,7 @@ app.get('/stories', async (req, res) => {
         }).sort({ createdAt: -1 });
         res.json(stories);
     } catch (error) {
+        console.error('Error fetching stories:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -233,8 +236,51 @@ app.get('/stories/user/:userId', async (req, res) => {
         }).sort({ createdAt: -1 });
         res.json(stories);
     } catch (error) {
+        console.error('Error fetching user stories:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
+// Fonction améliorée pour démarrer le serveur avec gestion d'erreurs
+async function startServer() {
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryDelay = 5000; // 5 secondes
+
+    // Tentative de connexion à Kafka avec retry
+    while (retryCount < maxRetries) {
+        try {
+            console.log(`Attempting to connect to Kafka (attempt ${retryCount + 1}/${maxRetries})...`);
+            await producer.connect();
+            console.log('Successfully connected to Kafka');
+            break;
+        } catch (error) {
+            retryCount++;
+            console.error(`Failed to connect to Kafka: ${error.message}`);
+            
+            if (retryCount >= maxRetries) {
+                console.error('Max retries reached. Starting server without Kafka connection.');
+                break;
+            }
+            
+            console.log(`Retrying in ${retryDelay/1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+    }
+
+    // Démarrer le serveur même si Kafka n'est pas connecté
+    app.listen(PORT, () => {
+        console.log(`Posts service running on port ${PORT}`);
+    });
+}
+
 startServer().catch(console.error);
+
+// Gestion des erreurs non capturées
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "social-network.fullname" . }}-kafka-consumers
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-consumers
+spec:
+  replicas: {{ .Values.kafkaConsumers.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "social-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kafka-consumers
+  template:
+    metadata:
+      labels:
+        {{- include "social-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka-consumers
+    spec:
+      containers:
+      - name: kafka-consumers
+        image: {{ .Values.kafkaConsumers.image.repository }}:{{ .Values.kafkaConsumers.image.tag }}
+        env:
+        - name: KAFKA_BROKERS
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}"
+        - name: MONGODB_URI
+          value: "mongodb://{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.port }}"
+        resources:
+          {{- toYaml .Values.kafkaConsumers.resources | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+            - node
+            - -e
+            - "console.log('Health check')"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - node
+            - -e
+            - "console.log('Readiness check')"
+          initialDelaySeconds: 5
+          periodSeconds: 5

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graphql-service-config
+  namespace: social-network
+data:
+  POSTS_SERVICE_URL: "http://posts-service:3020"
+  GRAPHQL_SERVICE_PORT: "4000"

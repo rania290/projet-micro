@@ -1,0 +1,360 @@
+# Default values for social-network microservices
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  namespace: social-network
+  imagePullSecrets: []
+  
+  # MongoDB configuration
+  mongodb:
+    uri: "mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@${MONGODB_SERVICE_NAME}:${MONGODB_SERVICE_PORT}/${MONGODB_DATABASE}?authSource=admin"
+    
+  # Kafka configuration
+  kafka:
+    brokers: "kafka:9092"
+    
+  # Application settings
+  app:
+    replicaCount: 2
+    imagePullPolicy: IfNotPresent
+    podAnnotations: {}
+    podLabels: {}
+    resources: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    
+  # Ingress configuration
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    hosts:
+      - host: social-network.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+# MongoDB
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "6.0"
+    pullPolicy: IfNotPresent
+  
+  # Authentication
+  auth:
+    enabled: true
+    rootUser: admin
+    rootPassword: password
+    username: socialuser
+    password: socialpass
+    database: social-network
+    
+  # Persistence
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 27017
+    
+  # Resources
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# Zookeeper
+zookeeper:
+  enabled: true
+  image:
+    repository: bitnami/zookeeper
+    tag: "3.9"
+    pullPolicy: IfNotPresent
+  
+  # Authentication
+  auth:
+    enabled: true
+    serverUsers: ""
+    serverPasswords: ""
+    
+  # Persistence
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+    
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 2181
+
+# Kafka
+kafka:
+  enabled: true
+  image:
+    repository: bitnami/kafka
+    tag: "3.6"
+    pullPolicy: IfNotPresent
+  
+  # Replica count
+  replicaCount: 1
+  
+  # Configuration
+  config: {}
+  
+  # Persistence
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9092
+
+# Posts Service
+postsService:
+  enabled: true
+  image:
+    repository: your-registry/social-network-posts
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: http
+    
+  # Resources
+  resources: {}
+  
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# GraphQL Service
+graphqlService:
+  enabled: true
+  image:
+    repository: your-registry/social-network-graphql
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 4000
+    targetPort: http
+
+# Chat Service
+chatService:
+  enabled: true
+  image:
+    repository: your-registry/social-network-chat
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 50051
+    targetPort: grpc
+
+
+
+# Monitoring
+monitoring:
+  enabled: true
+  
+  # Prometheus
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+  
+  # Grafana
+  grafana:
+    enabled: true
+    adminUser: admin
+    adminPassword: admin
+    service:
+      type: ClusterIP
+      port: 3000
+    
+    # Dashboards
+    dashboards:
+      default:
+        home-dashboard:
+          gnetId: 10242
+          revision: 1
+          datasource: Prometheus
+
+# ArgoCD Configuration
+argocd:
+  enabled: true
+  namespace: argocd
+  
+  # Application configuration
+  application:
+    name: social-network
+    namespace: social-network
+    project: default
+    
+    # Source configuration
+    source:
+      repoURL: https://github.com/your-org/social-network.git
+      targetRevision: HEAD
+      path: helm/social-network
+    
+    # Destination configuration
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: social-network
+    
+    # Sync policy
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+      syncOptions:
+        - CreateNamespace=true
+
+# Posts Service
+postsService:
+  enabled: true
+  image:
+    repository: projet-micro-posts-service
+    tag: "latest"
+  replicaCount: 2
+  port: 3020
+  service:
+    type: ClusterIP
+    port: 3020
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# GraphQL Service
+graphqlService:
+  enabled: true
+  image:
+    repository: projet-micro-graphql-service
+    tag: "latest"
+  replicaCount: 2
+  port: 4000
+  service:
+    type: LoadBalancer
+    port: 4000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Chat Service
+chatService:
+  enabled: true
+  image:
+    repository: projet-micro-chat-service
+    tag: "latest"
+  replicaCount: 2
+  port: 50051
+  service:
+    type: ClusterIP
+    port: 50051
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Kafka Consumers
+kafkaConsumers:
+  enabled: true
+  image:
+    repository: projet-micro-kafka-consumers
+    tag: "latest"
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Prometheus
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: "v2.45.0"
+  replicaCount: 1
+  port: 9090
+  service:
+    type: ClusterIP
+    port: 9090
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+
+# Grafana
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: "10.1.0"
+  adminPassword: "admin123"
+  replicaCount: 1
+  port: 3000
+  service:
+    type: LoadBalancer
+    port: 3000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"

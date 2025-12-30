@@ -24,6 +24,14 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/social-ne
     useUnifiedTopology: true
 });
 
+mongoose.connection.on('connected', () => {
+    console.log('Connected to MongoDB from chat-service');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('MongoDB connection error:', err);
+});
+
 // Message Schema
 const MessageSchema = new mongoose.Schema({
     text: { type: String, required: true },
@@ -34,10 +42,13 @@ const MessageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', MessageSchema);
 
-// Kafka configuration
+// Kafka configuration - CORRECTION ICI
+const kafkaBrokers = process.env.KAFKA_BROKERS || 'kafka:29092';
+console.log(`Connecting to Kafka brokers: ${kafkaBrokers}`);
+
 const kafka = new Kafka({
     clientId: 'chat-service',
-    brokers: ['localhost:9092']
+    brokers: [kafkaBrokers]
 });
 
 const producer = kafka.producer();
@@ -108,7 +119,30 @@ const chatService = {
 
 // Start gRPC server
 async function startServer() {
-    await producer.connect();
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryDelay = 5000; // 5 secondes
+
+    // Tentative de connexion à Kafka avec retry
+    while (retryCount < maxRetries) {
+        try {
+            console.log(`Attempting to connect to Kafka (attempt ${retryCount + 1}/${maxRetries})...`);
+            await producer.connect();
+            console.log('Successfully connected to Kafka');
+            break;
+        } catch (error) {
+            retryCount++;
+            console.error(`Failed to connect to Kafka: ${error.message}`);
+            
+            if (retryCount >= maxRetries) {
+                console.error('Max retries reached. Starting server without Kafka connection.');
+                break;
+            }
+            
+            console.log(`Retrying in ${retryDelay/1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+    }
 
     const server = new grpc.Server();
     server.addService(chat.ChatService.service, chatService);
@@ -129,3 +163,12 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// Gestion des erreurs non capturées
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});

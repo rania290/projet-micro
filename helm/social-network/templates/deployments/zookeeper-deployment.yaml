@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "social-network.fullname" . }}-zookeeper
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zookeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "social-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zookeeper
+  template:
+    metadata:
+      labels:
+        {{- include "social-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zookeeper
+    spec:
+      containers:
+      - name: zookeeper
+        image: {{ .Values.zookeeper.image.repository }}:{{ .Values.zookeeper.image.tag }}
+        ports:
+        - containerPort: {{ .Values.zookeeper.service.port }}
+        env:
+        - name: ALLOW_ANONYMOUS_LOGIN
+          value: "yes"
+        volumeMounts:
+        - name: zookeeper-storage
+          mountPath: /bitnami/zookeeper
+        resources:
+          {{- toYaml .Values.zookeeper.resources | nindent 10 }}
+      volumes:
+      - name: zookeeper-storage
+        persistentVolumeClaim:
+          claimName: {{ include "social-network.fullname" . }}-zookeeper-pvc

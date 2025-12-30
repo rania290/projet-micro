@@ -1,0 +1,21 @@
+# Use Node.js official image
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --omit=dev
+
+# Copy consumer source code
+COPY notifications.js ./
+
+# Health check - consumer doesn't expose ports, check if process is running
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD pgrep -f "node notifications.js" || exit 1
+
+# Start the notifications consumer
+CMD ["node", "notifications.js"]

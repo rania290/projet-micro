@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "social-network.fullname" . }}-posts-service
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: posts-service
+spec:
+  replicas: {{ .Values.postsService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "social-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: posts-service
+  template:
+    metadata:
+      labels:
+        {{- include "social-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: posts-service
+    spec:
+      containers:
+      - name: posts-service
+        image: {{ .Values.postsService.image.repository }}:{{ .Values.postsService.image.tag }}
+        ports:
+        - containerPort: {{ .Values.postsService.port }}
+        env:
+        - name: MONGODB_URI
+          value: {{ .Values.global.mongodb.uri }}
+        - name: KAFKA_BROKERS
+          value: {{ .Values.global.kafka.brokers }}
+        - name: POSTS_SERVICE_PORT
+          value: "{{ .Values.postsService.port }}"
+        resources:
+          {{- toYaml .Values.postsService.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /posts
+            port: {{ .Values.postsService.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /posts
+            port: {{ .Values.postsService.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5

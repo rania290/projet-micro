@@ -1,19 +1,151 @@
-# Réseau Social - Architecture Microservices
+# Réseau Social - Architecture Microservices avec DevOps
 
 ## Vue d'Ensemble
 
-Cette plateforme de réseau social est construite sur une architecture de microservices, utilisant Node.js et divers protocoles de communication pour créer une application scalable et robuste. La plateforme permet aux utilisateurs de partager des posts, des stories éphémères (24h), de discuter en temps réel et de recevoir des notifications d'activités.
+Cette plateforme de réseau social est construite sur une architecture de microservices conteneurisée et déployée sur Kubernetes. Le projet intègre des pratiques DevOps avancées incluant l'intégration continue, le déploiement continu, et l'observabilité.
 
-### Technologies utilisées
--  Node.js: Plateforme d'exécution
--  Express.js: Framework web pour les API REST
--  MongoDB & Mongoose: Base de données et ODM
--  Kafka: Bus de messages pour la communication entre services
--  Apollo Server: Serveur GraphQL
--  gRPC: Framework RPC pour la communication en temps réel du chat
--  Protocol Buffers: Format d'échange pour gRPC
+### Fonctionnalités
+- Partage de posts et stories éphémères
+- Chat en temps réel
+- Système de notifications
+- API GraphQL unifiée
+- Monitoring avec Prometheus et Grafana
 
-## Structure du Projet
+### Technologies principales
+- **Backend**: Node.js, Express.js, Apollo Server, gRPC
+- **Base de données**: MongoDB avec Mongoose
+- **Messagerie**: Kafka avec Zookeeper
+- **Conteneurisation**: Docker, Docker Compose
+- **Orchestration**: Kubernetes (Docker Desktop)
+- **CI/CD**: Jenkins avec intégration Docker Hub
+- **Sécurité**: Analyse de vulnérabilités avec Trivy
+- **Monitoring**: Prometheus, Grafana
+- **Infrastructure as Code**: Helm Charts, Kubernetes Manifests
+
+## Structure du Projet DevOps
+
+```
+projet-micro/
+├── .github/                   # Fichiers de configuration GitHub
+├── helm/                     # Charts Helm pour le déploiement
+├── jenkins/                  # Fichiers de configuration Jenkins
+├── k8s/                      # Manifests Kubernetes
+│   ├── argocd.yaml           # Configuration ArgoCD
+│   ├── chat-service.yaml     # Service de chat
+│   ├── graphql-service.yaml  # Service GraphQL
+│   ├── kafka-consumers.yaml  # Consommateurs Kafka
+│   ├── kafka.yaml            # Configuration Kafka
+│   ├── mongodb.yaml          # Configuration MongoDB
+│   ├── namespace.yaml        # Définition du namespace
+│   ├── posts-service.yaml    # Service de posts
+│   └── zookeeper.yaml        # Configuration Zookeeper
+├── monitoring/               # Configuration du monitoring
+│   ├── grafana-k8s.yaml      # Déploiement Grafana
+│   ├── prometheus-k8s.yaml   # Déploiement Prometheus
+│   └── prometheus.yml        # Configuration Prometheus
+├── services/                 # Code source des services
+├── .dockerignore             # Fichiers ignorés par Docker
+├── .gitignore               # Fichiers ignorés par Git
+├── deploy-k8s.ps1           # Script de déploiement Kubernetes
+├── docker-compose.yml        # Configuration Docker Compose
+├── Jenkinsfile              # Pipeline CI/CD
+└── README.md                # Ce fichier
+```
+
+## Prérequis
+
+- Docker Desktop avec Kubernetes activé
+- kubectl
+- Helm
+- ArgoCD (optionnel pour GitOps)
+- Un compte Docker Hub
+
+## Démarrage rapide
+
+### 1. Démarrer avec Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+### 2. Déploiement sur Kubernetes local
+
+1. Activer Kubernetes dans Docker Desktop
+2. Appliquer les configurations :
+
+```bash
+# Créer le namespace
+kubectl apply -f k8s/base/namespace.yaml
+
+# Déployer les bases de données
+kubectl apply -f k8s/base/mongodb-deployment.yaml
+kubectl apply -f k8s/base/zookeeper-deployment.yaml
+kubectl apply -f k8s/base/kafka-deployment.yaml
+
+# Déployer les services
+kubectl apply -f k8s/services/posts-service/deployment.yaml
+kubectl apply -f k8s/services/chat-service/deployment.yaml
+kubectl apply -f k8s/services/graphql-service/deployment.yaml
+kubectl apply -f k8s/services/kafka-consumers/notifications-deployment.yaml
+kubectl apply -f k8s/services/kafka-consumers/stories-deployment.yaml
+
+# Déployer le monitoring
+kubectl apply -f k8s/monitoring/prometheus/prometheus-deployment.yaml
+kubectl apply -f k8s/monitoring/grafana/grafana-deployment.yaml
+```
+
+### 3. Accès aux services
+
+- **GraphQL API**: http://localhost:4000/graphql
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+
+## CI/CD avec Jenkins
+
+Le pipeline Jenkins effectue les étapes suivantes :
+1. Vérification du code source
+2. Installation des dépendances
+3. Exécution des tests
+4. Construction des images Docker
+5. Analyse de sécurité avec Trivy
+6. Push vers Docker Hub
+7. Déploiement sur Kubernetes
+
+## Monitoring et Observabilité
+
+Le projet inclut :
+- **Prometheus** pour la collecte des métriques
+- **Grafana** pour la visualisation
+- Métriques d'application et d'infrastructure
+- Tableaux de bord prédéfinis
+
+## Sécurité
+
+- Analyse des vulnérabilités avec Trivy
+- Séparation des préoccupations avec les namespaces
+- Configuration des limites de ressources
+- Politiques de sécurité réseau
+
+## Dépannage
+
+### Voir les logs des pods
+```bash
+kubectl logs -n social-network <pod-name>
+```
+
+### Accéder à un shell dans un pod
+```bash
+kubectl exec -it -n social-network <pod-name> -- /bin/bash
+```
+
+### Redémarrer un déploiement
+```bash
+kubectl rollout restart deployment -n social-network <deployment-name>
+```
+
+## Licence
+
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ```
 projet-micro/
@@ -306,4 +438,138 @@ NODE_ENV=development
    - Lancer le service GraphQL
    - Activer les consumers
 
+## Déploiement DevOps
 
+### Prérequis
+- Docker Desktop avec Kubernetes activé
+- Helm 3.x
+- Jenkins (optionnel pour CI/CD)
+- kubectl
+
+### Conteneurisation avec Docker
+
+1. **Construction des images**
+   ```bash
+   docker-compose build
+   ```
+
+2. **Démarrage local**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Arrêt**
+   ```bash
+   docker-compose down -v
+   ```
+
+### Déploiement Kubernetes
+
+1. **Création du namespace**
+   ```bash
+   kubectl apply -f kubernetes/namespace.yaml
+   ```
+
+2. **Déploiement avec script**
+   ```powershell
+   .\deploy-k8s.ps1
+   ```
+
+3. **Vérification**
+   ```bash
+   kubectl get pods -n social-network
+   kubectl get services -n social-network
+   ```
+
+### Déploiement avec Helm
+
+1. **Installation du chart**
+   ```bash
+   helm install social-network ./helm/social-network
+   ```
+
+2. **Mise à jour**
+   ```bash
+   helm upgrade social-network ./helm/social-network
+   ```
+
+3. **Désinstallation**
+   ```bash
+   helm uninstall social-network
+   ```
+
+### Intégration Continue avec Jenkins
+
+1. **Configuration Jenkins**
+   - Installer les plugins: Docker, Kubernetes, Trivy
+   - Configurer les credentials Docker Hub
+   - Créer un pipeline avec le Jenkinsfile fourni
+
+2. **Pipeline stages**
+   - Checkout du code
+   - Installation des dépendances
+   - Tests
+   - Construction des images Docker
+   - Scan de sécurité avec Trivy
+   - Push vers Docker Hub
+   - Déploiement Kubernetes
+
+### Monitoring et Observabilité
+
+1. **Déploiement de la stack monitoring**
+   ```powershell
+   .\deploy-monitoring.ps1
+   ```
+
+2. **Accès aux interfaces**
+   - Prometheus: http://localhost:9090
+   - Grafana: http://localhost:3000 (admin/admin)
+
+3. **Configuration Grafana**
+   - Ajouter Prometheus comme source de données
+   - Importer des dashboards pour Kubernetes et applications Node.js
+
+### Tests et Validation
+
+1. **Tests des services**
+   ```bash
+   # GraphQL endpoint
+   curl -X POST http://localhost:4000/graphql \
+     -H "Content-Type: application/json" \
+     -d '{"query": "{ feed(userId: \"1\") { id content userId } }"}'
+   
+   # Posts service
+   curl http://localhost:3020/posts
+   ```
+
+2. **Tests de charge**
+   - Utiliser Apache Bench ou Artillery pour les tests de performance
+
+### Extensions Optionnelles
+
+#### Service Mesh avec Istio
+1. Installer Istio
+2. Annoter les services pour l'injection automatique
+3. Déployer Kiali pour la visualisation
+
+#### Infrastructure as Code avec Terraform
+1. Créer des modules pour provisionner:
+   - Cluster EKS
+   - Registre ECR
+   - Base de données RDS
+
+#### Déploiement sur EKS
+1. Configurer AWS CLI
+2. Utiliser Terraform pour provisionner l'infrastructure
+3. Déployer avec Helm sur EKS
+
+### Dépannage
+
+**Problèmes courants:**
+- Vérifier les logs: `kubectl logs -n social-network <pod-name>`
+- Vérifier les événements: `kubectl get events -n social-network`
+- Vérifier les ressources: `kubectl describe pod -n social-network <pod-name>`
+
+**Debugging:**
+- Port-forwarding: `kubectl port-forward -n social-network svc/graphql-service 4000:4000`
+- Exec dans un pod: `kubectl exec -it -n social-network <pod-name> -- /bin/sh`

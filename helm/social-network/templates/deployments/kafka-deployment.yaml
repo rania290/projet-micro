@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "social-network.fullname" . }}-kafka
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "social-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kafka
+  template:
+    metadata:
+      labels:
+        {{- include "social-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: {{ .Values.kafka.image.repository }}:{{ .Values.kafka.image.tag }}
+        ports:
+        - containerPort: {{ .Values.kafka.service.port }}
+        env:
+        - name: KAFKA_CFG_ZOOKEEPER_CONNECT
+          value: "{{ include "social-network.fullname" . }}-zookeeper:{{ .Values.zookeeper.service.port }}"
+        - name: KAFKA_CFG_LISTENERS
+          value: "PLAINTEXT://:{{ .Values.kafka.service.port }}"
+        - name: KAFKA_CFG_ADVERTISED_LISTENERS
+          value: "PLAINTEXT://{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
+        - name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE
+          value: "true"
+        - name: ALLOW_PLAINTEXT_LISTENER
+          value: "yes"
+        volumeMounts:
+        - name: kafka-storage
+          mountPath: /bitnami/kafka
+        resources:
+          {{- toYaml .Values.kafka.resources | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+              - kafka-broker-api-versions.sh
+              - --bootstrap-server
+              - localhost:{{ .Values.kafka.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - kafka-broker-api-versions.sh
+              - --bootstrap-server
+              - localhost:{{ .Values.kafka.service.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: kafka-storage
+        persistentVolumeClaim:
+          claimName: {{ include "social-network.fullname" . }}-kafka-pvc

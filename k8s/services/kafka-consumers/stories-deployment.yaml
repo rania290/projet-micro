@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stories-consumer
+  namespace: social-network
+  labels:
+    app: stories-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stories-consumer
+  template:
+    metadata:
+      labels:
+        app: stories-consumer
+    spec:
+      containers:
+      - name: stories-consumer
+        image: rania290/projet-micro-kafka-consumers-stories:latest
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://admin:password@mongodb:27017/social-network?authSource=admin"
+        - name: KAFKA_BROKERS
+          value: "kafka:9092"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - pgrep -f "node stories.js"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - pgrep -f "node stories.js"
+          initialDelaySeconds: 5
+          periodSeconds: 5

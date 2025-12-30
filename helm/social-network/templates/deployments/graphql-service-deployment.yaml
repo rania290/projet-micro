@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "social-network.fullname" . }}-graphql-service
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: graphql-service
+spec:
+  replicas: {{ .Values.graphqlService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "social-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: graphql-service
+  template:
+    metadata:
+      labels:
+        {{- include "social-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: graphql-service
+    spec:
+      containers:
+      - name: graphql-service
+        image: {{ .Values.graphqlService.image.repository }}:{{ .Values.graphqlService.image.tag }}
+        ports:
+        - containerPort: {{ .Values.graphqlService.port }}
+        env:
+        - name: POSTS_SERVICE_URL
+          value: "http://{{ include "social-network.fullname" . }}-posts-service:{{ .Values.postsService.port }}"
+        - name: GRAPHQL_SERVICE_PORT
+          value: "{{ .Values.graphqlService.port }}"
+        resources:
+          {{- toYaml .Values.graphqlService.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /.well-known/apollo/server-health
+            port: {{ .Values.graphqlService.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /.well-known/apollo/server-health
+            port: {{ .Values.graphqlService.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5

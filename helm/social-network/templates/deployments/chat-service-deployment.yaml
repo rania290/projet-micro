@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "social-network.fullname" . }}-chat-service
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chat-service
+spec:
+  replicas: {{ .Values.chatService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "social-network.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: chat-service
+  template:
+    metadata:
+      labels:
+        {{- include "social-network.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: chat-service
+    spec:
+      containers:
+      - name: chat-service
+        image: {{ .Values.chatService.image.repository }}:{{ .Values.chatService.image.tag }}
+        ports:
+        - containerPort: {{ .Values.chatService.port }}
+        env:
+        - name: KAFKA_BROKERS
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}"
+        - name: CHAT_SERVICE_PORT
+          value: "{{ .Values.chatService.port }}"
+        resources:
+          {{- toYaml .Values.chatService.resources | nindent 10 }}
+        livenessProbe:
+          grpc:
+            port: {{ .Values.chatService.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          grpc:
+            port: {{ .Values.chatService.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5

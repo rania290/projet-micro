@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: social-network
+  labels:
+    app: chat-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+    spec:
+      containers:
+      - name: chat-service
+        image: rania290/projet-micro-chat-service:latest
+        ports:
+        - containerPort: 50051
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://admin:password@mongodb:27017/social-network?authSource=admin"
+        - name: KAFKA_BROKERS
+          value: "kafka:9092"
+        - name: CHAT_SERVICE_PORT
+          value: "50051"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - pgrep -f "node server.js"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - pgrep -f "node server.js"
+          initialDelaySeconds: 5
+          periodSeconds: 5

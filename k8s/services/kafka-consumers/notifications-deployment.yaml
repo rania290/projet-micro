@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-consumer
+  namespace: social-network
+  labels:
+    app: notifications-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications-consumer
+  template:
+    metadata:
+      labels:
+        app: notifications-consumer
+    spec:
+      containers:
+      - name: notifications-consumer
+        image: rania290/projet-micro-kafka-consumers-notifications:latest
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://admin:password@mongodb:27017/social-network?authSource=admin"
+        - name: KAFKA_BROKERS
+          value: "kafka:9092"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - pgrep -f "node notifications.js"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - pgrep -f "node notifications.js"
+          initialDelaySeconds: 5
+          periodSeconds: 5

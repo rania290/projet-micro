@@ -1,0 +1,34 @@
+{
+  "dashboard": {
+    "title": "Kafka Dashboard",
+    "tags": ["kafka", "social-network"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Kafka Topics",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "kafka_topic_partitions{topic=~\".*\"}",
+            "legendFormat": "{{topic}}"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "5s",
+    "schemaVersion": 16,
+    "version": 0,
+    "links": []
+  }
+}

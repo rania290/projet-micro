@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: social-network
+  namespace: argocd
+spec:
+  project: social-network
+  source:
+    repoURL: https://github.com/rania290/projet-micro
+    targetRevision: HEAD
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: social-network
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

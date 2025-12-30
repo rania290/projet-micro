@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "social-network.fullname" . }}-posts-service
+  labels:
+    {{- include "social-network.labels" . | nindent 4 }}
+    app.kubernetes.io/component: posts-service
+spec:
+  type: {{ .Values.postsService.service.type }}
+  ports:
+  - port: {{ .Values.postsService.port }}
+    targetPort: {{ .Values.postsService.port }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "social-network.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: posts-service

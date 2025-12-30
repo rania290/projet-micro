@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: social-network
+  labels:
+    grafana_dashboard: "1"
+data:
+  microservices-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Microservices Dashboard",
+        "tags": ["microservices", "social-network"],
+        "timezone": "browser",
+        "panels": [],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "templating": {
+          "list": []
+        },
+        "annotations": {
+          "list": []
+        },
+        "refresh": "5s",
+        "schemaVersion": 16,
+        "version": 0,
+        "links": []
+      }
+    }
+  kafka-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Kafka Dashboard",
+        "tags": ["kafka", "social-network"],
+        "timezone": "browser",
+        "panels": [],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "templating": {
+          "list": []
+        },
+        "annotations": {
+          "list": []
+        },
+        "refresh": "5s",
+        "schemaVersion": 16,
+        "version": 0,
+        "links": []
+      }
+    }
