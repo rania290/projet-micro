@@ -77,21 +77,30 @@ pipeline {
         stage('Build Images') {
             steps {
                 echo '🏗️ Construction des images Docker...'
-                sh './jenkins/scripts/build.sh'
+                sh '''
+                    chmod +x jenkins/scripts/build.sh
+                    ./jenkins/scripts/build.sh
+                '''
             }
         }
 
         stage('Security Scan') {
             steps {
                 echo '🔍 Analyse de sécurité...'
-                sh './jenkins/scripts/scan.sh'
+                sh '''
+                    chmod +x jenkins/scripts/scan.sh
+                    ./jenkins/scripts/scan.sh
+                '''
             }
         }
 
         stage('Push Images') {
             steps {
                 echo '📤 Publication des images...'
-                sh './jenkins/scripts/push.sh'
+                sh '''
+                    chmod +x jenkins/scripts/push.sh
+                    ./jenkins/scripts/push.sh
+                '''
             }
         }
 
