@@ -112,6 +112,10 @@ pipeline {
                     sed -i "s/repository: projet-micro-/repository: ${DOCKER_REGISTRY}\\/projet-micro-/g" helm/social-network/values.yaml
                     sed -i "s/tag: \"latest\"/tag: \"${BUILD_NUMBER}\"/g" helm/social-network/values.yaml
 
+                    # Configurer git
+                    git config user.email "jenkins@local.dev"
+                    git config user.name "Jenkins CI"
+
                     # Commit et push les changements
                     git add helm/social-network/values.yaml
                     git commit -m "Update image repositories and tags to ${BUILD_NUMBER}"
