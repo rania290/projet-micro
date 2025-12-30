@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18-bullseye'
-            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
@@ -24,9 +19,17 @@ pipeline {
             steps {
                 echo '🛠️ Configuration de l\'environnement...'
                 sh '''
+                    # Mise à jour des paquets
+                    sudo apt-get update
+
+                    # Installer Node.js et NPM si nécessaire
+                    if ! command -v node &> /dev/null; then
+                        sudo apt-get install -y nodejs npm
+                    fi
+
                     # Installer Docker CLI si nécessaire
                     if ! command -v docker &> /dev/null; then
-                        apt-get update && apt-get install -y docker.io
+                        sudo apt-get install -y docker.io
                     fi
 
                     # Afficher les versions
