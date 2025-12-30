@@ -1,76 +1,123 @@
 pipeline {
     agent any
-    
+
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
+        DOCKER_REGISTRY = 'rania290'
         DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
-    
+
     stages {
-        stage('Setup Environment') {
-            steps {
-                echo '🛠️  Configuration de l’environnement...'
-                sh '''
-                    # Vérifier et installer Node.js si nécessaire
-                    if ! command -v node &> /dev/null; then
-                        echo "Installation de Node.js..."
-                        apt-get update && apt-get install -y curl
-                        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-                        apt-get install -y nodejs
-                    fi
-                    
-                    # Afficher les versions
-                    echo "Node: $(node --version 2>/dev/null || echo 'non installé')"
-                    echo "NPM: $(npm --version 2>/dev/null || echo 'non installé')"
-                    echo "Docker: $(docker --version 2>/dev/null || echo 'non installé')"
-                '''
-            }
-        }
-        
         stage('Checkout') {
             steps {
                 echo '📥 Téléchargement du code...'
                 checkout scm
             }
         }
-        
-        stage('Verify Project Structure') {
+
+        stage('Setup Environment') {
             steps {
-                echo '📁 Vérification de la structure...'
+                echo '🛠️ Configuration de l\'environnement...'
                 sh '''
-                    echo "Fichiers trouvés:"
-                    find . -type f -name "package.json" -o -name "Dockerfile*" | sort
-                    
-                    if [ -f "services/posts-service/package.json" ]; then
-                        echo "✅ posts-service/package.json trouvé"
-                        cd services/posts-service
-                        npm install --only=prod 2>&1 || echo "npm install échoué"
-                    else
-                        echo "❌ posts-service/package.json non trouvé"
+                    # Vérifier et installer Node.js si nécessaire
+                    if ! command -v node &> /dev/null; then
+                        echo "Installation de Node.js..."
+                        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+                        apt-get install -y nodejs
                     fi
+
+                    # Afficher les versions
+                    echo "Node: $(node --version)"
+                    echo "NPM: $(npm --version)"
+                    echo "Docker: $(docker --version)"
                 '''
             }
         }
-        
-        stage('Simple Docker Test') {
-            when {
-                expression { sh(script: 'docker --version', returnStatus: true) == 0 }
-            }
+
+        stage('Install Dependencies') {
             steps {
-                echo '🐳 Test Docker simple...'
-                sh 'docker run --rm hello-world || echo "Docker ne peut pas exécuter de conteneurs"'
+                echo '📦 Installation des dépendances...'
+                sh '''
+                    # Installer les dépendances pour chaque service
+                    for service in posts-service graphql-service chat-service kafka-consumers; do
+                        if [ -f "services/$service/package.json" ]; then
+                            echo "Installation des dépendances pour $service..."
+                            cd services/$service
+                            npm install
+                            cd ../..
+                        fi
+                    done
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                echo '🧪 Exécution des tests...'
+                sh '''
+                    # Exécuter les tests pour chaque service
+                    for service in posts-service graphql-service chat-service kafka-consumers; do
+                        if [ -f "services/$service/package.json" ]; then
+                            echo "Tests pour $service..."
+                            cd services/$service
+                            npm test || echo "Tests échoués pour $service"
+                            cd ../..
+                        fi
+                    done
+                '''
+            }
+        }
+
+        stage('Build Images') {
+            steps {
+                echo '🏗️ Construction des images Docker...'
+                sh './jenkins/scripts/build.sh'
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                echo '🔍 Analyse de sécurité...'
+                sh './jenkins/scripts/scan.sh'
+            }
+        }
+
+        stage('Push Images') {
+            steps {
+                echo '📤 Publication des images...'
+                sh './jenkins/scripts/push.sh'
+            }
+        }
+
+        stage('Update Helm Chart') {
+            steps {
+                echo '📝 Mise à jour du chart Helm...'
+                sh '''
+                    # Mettre à jour les tags d'image dans values.yaml
+                    sed -i "s/tag: \"latest\"/tag: \"${BUILD_NUMBER}\"/g" helm/social-network/values.yaml
+
+                    # Commit et push les changements
+                    git add helm/social-network/values.yaml
+                    git commit -m "Update image tags to ${BUILD_NUMBER}"
+                    git push origin HEAD:main
+                '''
             }
         }
     }
-    
+
     post {
         always {
-            echo '✅ Pipeline terminé'
+            echo '🧹 Nettoyage...'
             sh '''
-                echo "=== Résumé ==="
-                echo "Build: ${BUILD_NUMBER}"
-                echo "Status: ${currentBuild.currentResult}"
+                # Supprimer les images locales
+                docker rmi $(docker images -q projet-micro-*) || true
             '''
+        }
+        success {
+            echo '✅ Pipeline réussi!'
+        }
+        failure {
+            echo '❌ Pipeline échoué!'
         }
     }
 }
