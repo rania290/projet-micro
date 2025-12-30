@@ -17,19 +17,12 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                echo '🛠️ Configuration de l\'environnement...'
+                echo '🛠️ Vérification de l\'environnement...'
                 sh '''
-                    # Vérifier et installer Node.js si nécessaire
-                    if ! command -v node &> /dev/null; then
-                        echo "Installation de Node.js..."
-                        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-                        apt-get install -y nodejs
-                    fi
-
                     # Afficher les versions
-                    echo "Node: $(node --version)"
-                    echo "NPM: $(npm --version)"
-                    echo "Docker: $(docker --version)"
+                    echo "Node: $(node --version 2>/dev/null || echo 'non installé')"
+                    echo "NPM: $(npm --version 2>/dev/null || echo 'non installé')"
+                    echo "Docker: $(docker --version 2>/dev/null || echo 'non installé')"
                 '''
             }
         }
