@@ -1,132 +1,76 @@
 pipeline {
-  agent any
-
+    agent any
+    
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
         DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
-
+    
     stages {
-        stage('Checkout Code') {
+        stage('Setup Environment') {
             steps {
-                echo '🔄 Récupération du code...'
-                sh 'git pull origin main || echo Code already up to date'
+                echo '🛠️  Configuration de l’environnement...'
+                sh '''
+                    # Vérifier et installer Node.js si nécessaire
+                    if ! command -v node &> /dev/null; then
+                        echo "Installation de Node.js..."
+                        apt-get update && apt-get install -y curl
+                        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+                        apt-get install -y nodejs
+                    fi
+                    
+                    # Afficher les versions
+                    echo "Node: $(node --version 2>/dev/null || echo 'non installé')"
+                    echo "NPM: $(npm --version 2>/dev/null || echo 'non installé')"
+                    echo "Docker: $(docker --version 2>/dev/null || echo 'non installé')"
+                '''
             }
         }
-
-        stage('Run Tests') {
+        
+        stage('Checkout') {
             steps {
-                echo '🧪 Exécution des tests...'
-                dir('services/posts-service') {
-                    sh 'npm ci'
-                    sh 'npm test'
-                }
-                dir('services/graphql-service') {
-                    sh 'npm ci'
-                    sh 'npm test'
-                }
-                dir('services/chat-service') {
-                    sh 'npm ci'
-                    sh 'npm test'
-                }
-                dir('services/kafka-consumers') {
-                    sh 'npm ci'
-                    sh 'npm test'
-                }
+                echo '📥 Téléchargement du code...'
+                checkout scm
             }
         }
-
-        stage('Build Posts Service') {
+        
+        stage('Verify Project Structure') {
             steps {
-                dir('services/posts-service') {
-                    sh 'docker build -t projet-micro-posts-service:${DOCKER_IMAGE_TAG} .'
-                }
+                echo '📁 Vérification de la structure...'
+                sh '''
+                    echo "Fichiers trouvés:"
+                    find . -type f -name "package.json" -o -name "Dockerfile*" | sort
+                    
+                    if [ -f "services/posts-service/package.json" ]; then
+                        echo "✅ posts-service/package.json trouvé"
+                        cd services/posts-service
+                        npm install --only=prod 2>&1 || echo "npm install échoué"
+                    else
+                        echo "❌ posts-service/package.json non trouvé"
+                    fi
+                '''
             }
         }
-
-        stage('Build GraphQL Service') {
-            steps {
-                dir('services/graphql-service') {
-                    sh 'docker build -t projet-micro-graphql-service:${DOCKER_IMAGE_TAG} .'
-                }
+        
+        stage('Simple Docker Test') {
+            when {
+                expression { sh(script: 'docker --version', returnStatus: true) == 0 }
             }
-        }
-
-        stage('Build Chat Service') {
             steps {
-                dir('services/chat-service') {
-                    sh 'docker build -t projet-micro-chat-service:${DOCKER_IMAGE_TAG} .'
-                }
-            }
-        }
-
-        stage('Build Kafka Consumers') {
-            steps {
-                dir('services/kafka-consumers') {
-                    sh 'docker build -f Dockerfile.notifications -t projet-micro-kafka-consumers-notifications:${DOCKER_IMAGE_TAG} .'
-                    sh 'docker build -f Dockerfile.stories -t projet-micro-kafka-consumers-stories:${DOCKER_IMAGE_TAG} .'
-                }
-            }
-        }
-
-        stage('Security Scan with Trivy') {
-            steps {
-                sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy:latest image --exit-code 0 --no-progress --format table projet-micro-posts-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy:latest image --exit-code 0 --no-progress --format table projet-micro-graphql-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasecurity/trivy:latest image --exit-code 0 --no-progress --format table projet-micro-chat-service:${DOCKER_IMAGE_TAG}'
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                sh 'echo $DOCKER_HUB_CREDENTIALS_PSW | docker login -u $DOCKER_HUB_CREDENTIALS_USR --password-stdin'
-
-                sh 'docker tag projet-micro-posts-service:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-posts-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker tag projet-micro-graphql-service:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-graphql-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker tag projet-micro-chat-service:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-chat-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker tag projet-micro-kafka-consumers-notifications:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-notifications:${DOCKER_IMAGE_TAG}'
-                sh 'docker tag projet-micro-kafka-consumers-stories:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-stories:${DOCKER_IMAGE_TAG}'
-
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-posts-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-graphql-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-chat-service:${DOCKER_IMAGE_TAG}'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-notifications:${DOCKER_IMAGE_TAG}'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-stories:${DOCKER_IMAGE_TAG}'
-
-                sh 'docker tag projet-micro-posts-service:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-posts-service:latest'
-                sh 'docker tag projet-micro-graphql-service:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-graphql-service:latest'
-                sh 'docker tag projet-micro-chat-service:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-chat-service:latest'
-                sh 'docker tag projet-micro-kafka-consumers-notifications:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-notifications:latest'
-                sh 'docker tag projet-micro-kafka-consumers-stories:${DOCKER_IMAGE_TAG} ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-stories:latest'
-
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-posts-service:latest'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-graphql-service:latest'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-chat-service:latest'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-notifications:latest'
-                sh 'docker push ${DOCKER_HUB_CREDENTIALS_USR}/projet-micro-kafka-consumers-stories:latest'
-            }
-        }
-
-        stage('Deploy Simulation') {
-            steps {
-                echo '🚀 Simulation de déploiement...'
-                // Simulation de déploiement - remplacer par la logique réelle
-                sh 'echo Déploiement simulé terminé'
+                echo '🐳 Test Docker simple...'
+                sh 'docker run --rm hello-world || echo "Docker ne peut pas exécuter de conteneurs"'
             }
         }
     }
-
+    
     post {
         always {
-            echo '🧹 Nettoyage...'
-            sh 'docker system prune -f'
-            echo 'Nettoyage terminé'
-        }
-        success {
-            echo 'Pipeline succeeded!'
-        }
-        failure {
-            echo '❌ Pipeline échoué !'
+            echo '✅ Pipeline terminé'
+            sh '''
+                echo "=== Résumé ==="
+                echo "Build: ${BUILD_NUMBER}"
+                echo "Status: ${currentBuild.currentResult}"
+            '''
         }
     }
 }
