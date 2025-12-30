@@ -20,16 +20,16 @@ pipeline {
                 echo '🛠️ Configuration de l\'environnement...'
                 sh '''
                     # Mise à jour des paquets
-                    sudo apt-get update
+                    apt-get update
 
                     # Installer Node.js et NPM si nécessaire
                     if ! command -v node &> /dev/null; then
-                        sudo apt-get install -y nodejs npm
+                        apt-get install -y nodejs npm
                     fi
 
                     # Installer Docker CLI si nécessaire
                     if ! command -v docker &> /dev/null; then
-                        sudo apt-get install -y docker.io
+                        apt-get install -y docker.io
                     fi
 
                     # Afficher les versions
