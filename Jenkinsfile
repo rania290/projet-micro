@@ -19,23 +19,16 @@ pipeline {
             steps {
                 echo '🛠️ Configuration de l\'environnement...'
                 sh '''
-                    # Mise à jour des paquets
-                    apt-get update
+                    # Vérifier les outils disponibles
+                    echo "Node: $(node --version 2>/dev/null || echo 'Node.js non disponible')"
+                    echo "NPM: $(npm --version 2>/dev/null || echo 'NPM non disponible')"
+                    echo "Docker: $(docker --version 2>/dev/null || echo 'Docker non disponible')"
 
-                    # Installer Node.js et NPM si nécessaire
-                    if ! command -v node &> /dev/null; then
-                        apt-get install -y nodejs npm
-                    fi
-
-                    # Installer Docker CLI si nécessaire
-                    if ! command -v docker &> /dev/null; then
-                        apt-get install -y docker.io
-                    fi
-
-                    # Afficher les versions
-                    echo "Node: $(node --version)"
-                    echo "NPM: $(npm --version)"
-                    echo "Docker: $(docker --version)"
+                    # Créer le répertoire node_modules s'il n'existe pas
+                    mkdir -p services/posts-service/node_modules
+                    mkdir -p services/graphql-service/node_modules
+                    mkdir -p services/chat-service/node_modules
+                    mkdir -p services/kafka-consumers/node_modules
                 '''
             }
         }
