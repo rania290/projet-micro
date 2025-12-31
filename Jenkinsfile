@@ -37,13 +37,11 @@ pipeline {
             steps {
                 echo '📦 Installation des dépendances...'
                 sh '''
-                    # Installer les dépendances pour chaque service
+                    # Utiliser Docker pour Node.js
                     for service in posts-service graphql-service chat-service kafka-consumers; do
                         if [ -f "services/$service/package.json" ]; then
                             echo "Installation des dépendances pour $service..."
-                            cd services/$service
-                            npm install
-                            cd ../..
+                            docker run --rm -v $(pwd)/services/$service:/app -w /app node:18-alpine sh -c "npm install"
                         fi
                     done
                 '''
@@ -54,13 +52,11 @@ pipeline {
             steps {
                 echo '🧪 Exécution des tests...'
                 sh '''
-                    # Exécuter les tests pour chaque service
+                    # Exécuter les tests pour chaque service avec Docker
                     for service in posts-service graphql-service chat-service kafka-consumers; do
                         if [ -f "services/$service/package.json" ]; then
                             echo "Tests pour $service..."
-                            cd services/$service
-                            npm test || echo "Tests échoués pour $service"
-                            cd ../..
+                            docker run --rm -v $(pwd)/services/$service:/app -w /app node:18-alpine sh -c "npm test" || echo "Tests échoués pour $service"
                         fi
                     done
                 '''
@@ -105,14 +101,10 @@ pipeline {
                     sed -i "s/repository: projet-micro-/repository: ${DOCKER_REGISTRY}\\/projet-micro-/g" helm/social-network/values.yaml
                     sed -i "s/tag: \"latest\"/tag: \"${BUILD_NUMBER}\"/g" helm/social-network/values.yaml
 
-                    # Configurer git
-                    git config user.email "jenkins@local.dev"
-                    git config user.name "Jenkins CI"
-
-                    # Commit et push les changements
-                    git add helm/social-network/values.yaml
-                    git commit -m "Update image repositories and tags to ${BUILD_NUMBER}"
-                    git push origin HEAD:main
+                    echo "✅ Chart Helm mis à jour avec les nouvelles images (tag: ${BUILD_NUMBER})"
+                    echo "📝 Note: Pour appliquer les changements, exécutez manuellement:"
+                    echo "   helm upgrade social-network ./helm/social-network"
+                    echo "   ou via ArgoCD si configuré"
                 '''
             }
         }
