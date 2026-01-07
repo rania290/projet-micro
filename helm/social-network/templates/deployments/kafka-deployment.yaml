@@ -33,23 +33,17 @@ spec:
           value: "true"
         volumeMounts:
         - name: kafka-storage
-          mountPath: /bitnami/kafka
+          mountPath: /var/lib/kafka/data
         resources:
           {{- toYaml .Values.kafka.resources | nindent 10 }}
         livenessProbe:
-          exec:
-            command:
-              - kafka-broker-api-versions.sh
-              - --bootstrap-server
-              - localhost:{{ .Values.kafka.service.port }}
+          tcpSocket:
+            port: {{ .Values.kafka.service.port }}
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
-          exec:
-            command:
-              - kafka-broker-api-versions.sh
-              - --bootstrap-server
-              - localhost:{{ .Values.kafka.service.port }}
+          tcpSocket:
+            port: {{ .Values.kafka.service.port }}
           initialDelaySeconds: 5
           periodSeconds: 5
       - name: kafka-exporter

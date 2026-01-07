@@ -23,13 +23,25 @@ spec:
         ports:
         - containerPort: {{ .Values.zookeeper.service.port }}
         env:
-        - name: ALLOW_ANONYMOUS_LOGIN
-          value: "yes"
+        - name: ZOOKEEPER_CLIENT_PORT
+          value: "{{ .Values.zookeeper.service.port }}"
+        - name: ZOOKEEPER_TICK_TIME
+          value: "2000"
         volumeMounts:
         - name: zookeeper-storage
-          mountPath: /bitnami/zookeeper
+          mountPath: /var/lib/zookeeper/data
         resources:
           {{- toYaml .Values.zookeeper.resources | nindent 10 }}
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.zookeeper.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.zookeeper.service.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
       - name: zookeeper-storage
         persistentVolumeClaim:
