@@ -533,21 +533,6 @@ Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus
 
 ---
 
-## 📞 Contact & Support
-
-- **Documentation** : [Wiki du projet](https://github.com/votre-repo/wiki)
-- **Issues** : [GitHub Issues](https://github.com/votre-repo/issues)
-- **Discussions** : [GitHub Discussions](https://github.com/votre-repo/discussions)
-
----
-
-## 🙏 Remerciements
-
-- Apache Kafka Community
-- Kubernetes SIG
-- Prometheus & Grafana Labs
-- Tous les contributeurs open-source
-
 ---
 
 <div align="center">
