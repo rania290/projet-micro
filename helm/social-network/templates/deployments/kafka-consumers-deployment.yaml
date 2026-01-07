@@ -20,6 +20,7 @@ spec:
       containers:
       - name: kafka-consumers
         image: {{ .Values.kafkaConsumers.image.repository }}:{{ .Values.kafkaConsumers.image.tag }}
+        imagePullPolicy: IfNotPresent
         env:
         - name: KAFKA_BROKERS
           value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}"

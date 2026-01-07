@@ -20,6 +20,7 @@ spec:
       containers:
       - name: graphql-service
         image: {{ .Values.graphqlService.image.repository }}:{{ .Values.graphqlService.image.tag }}
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: {{ .Values.graphqlService.port }}
         env:

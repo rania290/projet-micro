@@ -33,4 +33,4 @@ spec:
       volumes:
       - name: zookeeper-storage
         persistentVolumeClaim:
-          claimName: {{ include "social-network.fullname" . }}-zookeeper-pvc
+          claimName: zookeeper-pvc

@@ -20,13 +20,17 @@ spec:
       containers:
       - name: chat-service
         image: {{ .Values.chatService.image.repository }}:{{ .Values.chatService.image.tag }}
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: {{ .Values.chatService.port }}
+        - containerPort: {{ .Values.chatService.metricsPort }}
         env:
         - name: KAFKA_BROKERS
           value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}"
         - name: CHAT_SERVICE_PORT
           value: "{{ .Values.chatService.port }}"
+        - name: CHAT_SERVICE_METRICS_PORT
+          value: "{{ .Values.chatService.metricsPort }}"
         resources:
           {{- toYaml .Values.chatService.resources | nindent 10 }}
         livenessProbe:

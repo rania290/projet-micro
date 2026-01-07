@@ -20,6 +20,7 @@ spec:
       containers:
       - name: posts-service
         image: {{ .Values.postsService.image.repository }}:{{ .Values.postsService.image.tag }}
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: {{ .Values.postsService.port }}
         env:

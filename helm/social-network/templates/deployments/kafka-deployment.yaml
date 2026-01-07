@@ -54,7 +54,21 @@ spec:
               - localhost:{{ .Values.kafka.service.port }}
           initialDelaySeconds: 5
           periodSeconds: 5
+      - name: kafka-exporter
+        image: danielqsj/kafka-exporter:latest
+        ports:
+        - containerPort: 9308
+        env:
+        - name: KAFKA_SERVER
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       volumes:
       - name: kafka-storage
         persistentVolumeClaim:
-          claimName: {{ include "social-network.fullname" . }}-kafka-pvc
+          claimName: kafka-pvc

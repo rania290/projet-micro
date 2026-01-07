@@ -50,12 +50,26 @@ spec:
               - "db.adminCommand('ping')"
           initialDelaySeconds: 5
           periodSeconds: 5
+      - name: mongodb-exporter
+        image: percona/mongodb_exporter:0.39
+        ports:
+        - containerPort: 9216
+        env:
+        - name: MONGODB_URI
+          value: mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@localhost:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
       volumes:
       - name: mongodb-storage
         persistentVolumeClaim:
-          claimName: {{ include "social-network.fullname" . }}-mongodb-pvc
+          claimName: mongodb-pvc
       {{- if .Values.mongodb.persistence.enabled }}
       - name: mongodb-pvc
         persistentVolumeClaim:
-          claimName: {{ include "social-network.fullname" . }}-mongodb-pvc
+          claimName: mongodb-pvc
       {{- end }}
