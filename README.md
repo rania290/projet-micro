@@ -1,227 +1,559 @@
-# 📱 Réseau Social Microservices
+# 📱 Plateforme de Réseau Social - Architecture Microservices
 
+> Une application de réseau social moderne et scalable construite avec une architecture microservices cloud-native, démontrant les meilleures pratiques DevOps et l'observabilité complète.
 
-Ce projet est une plateforme de réseau social scalable construite sur une architecture **microservices**. Il démontre l'utilisation de **Docker**, **Kubernetes**, **Kafka** et **GraphQL** pour créer une application résiliente et observable.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Kafka](https://img.shields.io/badge/Apache%20Kafka-000?style=flat&logo=apachekafka)](https://kafka.apache.org/)
+
+---
+
+## 📑 Table des Matières
+
+- [Vue d'Ensemble](#-vue-densemble)
+- [Architecture](#️-architecture)
+- [Stack Technique](#-stack-technique)
+- [Prérequis](#-prérequis)
+- [Installation](#-installation)
+- [Configuration](#️-configuration)
+- [Validation & Tests](#-validation--tests)
+- [Monitoring & Observabilité](#-monitoring--observabilité)
+- [Captures d'Écran](#-captures-décran)
+- [Roadmap](#-roadmap)
+- [Contribution](#-contribution)
+- [Licence](#-licence)
+
+---
+
+## 🎯 Vue d'Ensemble
+
+Cette plateforme est une preuve de concept (PoC) démontrant l'implémentation d'un réseau social avec :
+
+- ✅ **Architecture découplée** : Services indépendants communiquant via API
+- ✅ **Event-driven** : Communication asynchrone via Apache Kafka
+- ✅ **Container-native** : Déploiement sur Kubernetes avec Docker
+- ✅ **Observabilité complète** : Prometheus + Grafana pour le monitoring
+- ✅ **CI/CD automatisé** : Pipeline Jenkins avec GitOps (ArgoCD)
+- ✅ **API unifiée** : Gateway GraphQL fédérant les microservices
+
+### Fonctionnalités Principales
+
+| Fonctionnalité | Description | Status |
+|---------------|-------------|--------|
+| 📝 **Publications** | CRUD posts avec likes et commentaires | ✅ Opérationnel |
+| 💬 **Chat temps réel** | Messagerie instantanée via gRPC/WebSocket | ✅ Opérationnel |
+| 🔔 **Notifications** | Système événementiel via Kafka | ✅ Opérationnel |
+| 📱 **Stories** | Contenu éphémère (consumer Kafka) | ✅ Opérationnel |
+| 🔐 **Authentification** | JWT + OAuth2 (Auth Service) | ✅ Opérationnel |
 
 ---
 
 ## 🏗️ Architecture
 
-Le système est composé de services découplés communiquant de manière asynchrone via Kafka et synchrone via gRPC/REST.
+### Diagramme Global
+
+Le système repose sur une architecture microservices découplée avec communication synchrone (GraphQL/gRPC) et asynchrone (Kafka).
 
 ```mermaid
 graph TB
-    Client((Client))
+    Client((Client Web/Mobile))
     
-    subgraph "K8s Cluster"
-        Ingress[Service LoadBalancer]
+    subgraph "Kubernetes Cluster"
+        Ingress[⚡ Ingress Controller<br/>LoadBalancer]
         
-        subgraph "API Layer"
-            GraphQL[🚀 GraphQL Gateway<br/>:4000]
-            ChatAPI[💬 Chat Service<br/>:8080]
+        subgraph "API Gateway Layer"
+            GraphQL[🚀 GraphQL Gateway<br/>Port: 4000<br/>Apollo Federation]
+            ChatAPI[💬 Chat Service<br/>Port: 8080<br/>gRPC + WebSocket]
         end
         
-        subgraph "Core Services"
-            Posts[📝 Posts Service<br/>:3020]
-            Auth[🔒 Auth Service]
+        subgraph "Core Business Services"
+            Posts[📝 Posts Service<br/>Port: 3020<br/>REST API]
+            Auth[🔒 Auth Service<br/>JWT + OAuth2]
+            Users[👤 Users Service<br/>Profils]
         end
         
-        subgraph "Event Bus"
-            Kafka{Apache Kafka}
-            Zookeeper[Zookeeper]
+        subgraph "Event Streaming Platform"
+            Kafka{Apache Kafka<br/>Event Bus}
+            Zookeeper[Zookeeper<br/>Coordination]
         end
         
-        subgraph "Consumers"
-            Notif[🔔 Notifications]
-            Stories[📱 Stories]
+        subgraph "Event Consumers"
+            Notif[🔔 Notifications Consumer<br/>Email + Push]
+            Stories[📱 Stories Consumer<br/>Ephemeral Content]
+            Analytics[📊 Analytics Consumer<br/>Metrics]
         end
         
-        subgraph "Data & Monitoring"
-            Mongo[(MongoDB)]
-            Prom[Prometheus]
-            Graf[Grafana]
+        subgraph "Data Layer"
+            Mongo[(MongoDB<br/>NoSQL Database)]
+            Redis[(Redis<br/>Cache + Sessions)]
+        end
+        
+        subgraph "Observability Stack"
+            Prom[📈 Prometheus<br/>Metrics Collection]
+            Graf[📊 Grafana<br/>Dashboards]
+            Loki[📝 Loki<br/>Logs Aggregation]
+        end
+        
+        subgraph "DevOps Tools"
+            Jenkins[🔧 Jenkins<br/>CI/CD Pipeline]
+            ArgoCD[🔄 ArgoCD<br/>GitOps]
         end
     end
 
-    Client --> Ingress
+    Client -->|HTTPS| Ingress
     Ingress --> GraphQL
     Ingress --> ChatAPI
     
-    GraphQL --> Posts
-    GraphQL --> Auth
+    GraphQL -->|Query Federation| Posts
+    GraphQL -->|Query Federation| Auth
+    GraphQL -->|Query Federation| Users
     
-    Posts --> Kafka
-    ChatAPI --> Kafka
+    Posts -->|Publish Events| Kafka
+    ChatAPI -->|Publish Events| Kafka
     
-    Kafka --> Notif
-    Kafka --> Stories
+    Kafka -->|Subscribe| Notif
+    Kafka -->|Subscribe| Stories
+    Kafka -->|Subscribe| Analytics
     
     Posts --> Mongo
     ChatAPI --> Mongo
-    Notif --> Mongo
+    Auth --> Redis
     
-    Prom -.-> GraphQL
-    Prom -.-> Posts
-    Prom -.-> Kafka
-    Graf --> Prom
+    Prom -.->|Scrape| GraphQL
+    Prom -.->|Scrape| Posts
+    Prom -.->|Scrape| Kafka
+    Graf -->|Query| Prom
+    Graf -->|Query| Loki
+    
+    Jenkins -->|Deploy| ArgoCD
+    ArgoCD -->|Sync| Ingress
 ```
 
-### Services Principaux
-- **GraphQL Gateway** : Point d'entrée unique aggregeant les données des microservices.
-- **Posts Service** : Gestion des publications, commentaires et likes.
-- **Chat Service** : Messagerie temps réel utilisant gRPC pour la performance.
-- **Kafka Consumers** : Traitement asynchrone pour les notifications et les stories.
+### Patterns Architecturaux Utilisés
+
+- **API Gateway** : GraphQL Apollo Federation pour l'agrégation des données
+- **Event Sourcing** : Kafka pour la traçabilité des événements
+- **CQRS** : Séparation lecture/écriture sur les services critiques
+- **Circuit Breaker** : Résilience avec retry et fallback
+- **Service Mesh** : (Optionnel) Istio pour le traffic management
 
 ---
 
-## 📋 1. Prérequis
+## 🛠 Stack Technique
 
-Assurez-vous d'avoir l'environnement suivant prêt :
+### Backend & Services
 
-| Outil | Version Min | Usage |
-|-------|-------------|-------|
-| **Docker Desktop** | Latest | Runtime conteneur & Cluster K8s local |
-| **kubectl** | Latest | CLI pour interagir avec le cluster |
-| **Helm** | 3.x | Gestionnaire de paquets pour K8s |
-| **Git** | Latest | Gestion de version |
+| Technologie | Usage | Version |
+|-------------|-------|---------|
+| **Node.js** | Runtime principal | 18+ |
+| **GraphQL (Apollo)** | API Gateway | 4.x |
+| **gRPC** | Communication inter-services | - |
+| **Express.js** | Framework REST API | 4.x |
+| **Apache Kafka** | Event streaming | 3.x |
+
+### Infrastructure & DevOps
+
+| Technologie | Usage | Version |
+|-------------|-------|---------|
+| **Docker** | Containerisation | 24+ |
+| **Kubernetes** | Orchestration | 1.28+ |
+| **Helm** | Package Manager K8s | 3.x |
+| **Jenkins** | CI/CD Pipeline | 2.4+ |
+| **ArgoCD** | GitOps | 2.9+ |
+
+### Data & Monitoring
+
+| Technologie | Usage | Version |
+|-------------|-------|---------|
+| **MongoDB** | Base NoSQL principale | 6.x |
+| **Redis** | Cache & Sessions | 7.x |
+| **Prometheus** | Métriques | 2.x |
+| **Grafana** | Visualisation | 10.x |
+| **Loki** | Logs centralisés | 2.x |
 
 ---
 
-## 🚀 2. Installation & Démarrage
+## 📋 Prérequis
 
-### A. Récupération du Projet
+### Environnement de Développement
+
+Assurez-vous d'avoir installé les outils suivants :
+
+| Outil | Version Minimale | Commande de Vérification |
+|-------|------------------|--------------------------|
+| **Docker Desktop** | 24.0+ | `docker --version` |
+| **kubectl** | 1.28+ | `kubectl version --client` |
+| **Helm** | 3.0+ | `helm version` |
+| **Git** | 2.0+ | `git --version` |
+| **Node.js** (optionnel) | 18.0+ | `node --version` |
+
+### Configuration Système Requise
+
+- **RAM** : Minimum 8 GB (16 GB recommandé pour Kubernetes)
+- **CPU** : 4 cores minimum
+- **Disk** : 20 GB d'espace libre
+- **OS** : Windows 10/11, macOS 12+, Linux (Ubuntu 20.04+)
+
+### Activation de Kubernetes dans Docker Desktop
+
 ```bash
-git clone <votre-url-repo>
-cd projet-micro
+# Windows/Mac : Docker Desktop > Settings > Kubernetes > Enable Kubernetes
+# Vérification
+kubectl cluster-info
+kubectl get nodes
 ```
 
-### B. Démarrage Rapide (Docker Compose)
-Pour un environnement de développement léger sans Kubernetes :
+---
+
+## 🚀 Installation
+
+### Option 1 : Démarrage Rapide (Docker Compose)
+
+**Idéal pour** : Développement local, tests rapides
+
 ```bash
+# 1. Cloner le projet
+git clone https://github.com/votre-username/social-network-microservices.git
+cd social-network-microservices
+
+# 2. Lancer tous les services
 docker-compose up -d
+
+# 3. Vérifier le statut
+docker-compose ps
+
+# 4. Suivre les logs
+docker-compose logs -f
 ```
 
-### C. Déploiement Kubernetes (Production-Like)
-Pour simuler un environnement de production complet :
+**Services disponibles après démarrage :**
+- GraphQL Playground : http://localhost:4000/graphql
+- Posts API : http://localhost:3020
+- Prometheus : http://localhost:9090
+- Grafana : http://localhost:3000
 
-**Étape 1 : Infrastructure (Data & Messaging)**
+---
+
+### Option 2 : Déploiement Kubernetes (Production-Ready)
+
+**Idéal pour** : Simulation environnement production, tests de scalabilité
+
+#### Étape 1️⃣ : Déploiement de l'Infrastructure
+
 ```bash
-kubectl apply -f k8s/base/
-# Attend que Kafka et Mongo soient prêts...
+# Créer les namespaces
+kubectl create namespace social-network
+kubectl create namespace monitoring
+kubectl create namespace jenkins
+
+# Déployer MongoDB
+kubectl apply -f k8s/base/mongodb/
+
+# Déployer Kafka + Zookeeper
+kubectl apply -f k8s/base/kafka/
+
+# Attendre que les pods soient prêts (peut prendre 2-3 min)
+kubectl wait --for=condition=ready pod -l app=mongodb -n social-network --timeout=300s
+kubectl wait --for=condition=ready pod -l app=kafka -n social-network --timeout=300s
 ```
 
-**Étape 2 : Microservices**
+#### Étape 2️⃣ : Déploiement des Microservices
+
 ```bash
-kubectl apply -f k8s/services/posts-service/deployment.yaml
-kubectl apply -f k8s/services/chat-service/deployment.yaml
-kubectl apply -f k8s/services/graphql-service/deployment.yaml
-kubectl apply -f k8s/services/kafka-consumers/deployment.yaml
+# Auth Service
+kubectl apply -f k8s/services/auth-service/
+
+# Posts Service
+kubectl apply -f k8s/services/posts-service/
+
+# Chat Service
+kubectl apply -f k8s/services/chat-service/
+
+# GraphQL Gateway
+kubectl apply -f k8s/services/graphql-service/
+
+# Kafka Consumers
+kubectl apply -f k8s/services/kafka-consumers/
+
+# Vérifier le déploiement
+kubectl get pods -n social-network
 ```
 
-**Étape 3 : Observabilité (Prometheus & Grafana)**
+#### Étape 3️⃣ : Déploiement de l'Observabilité
+
 ```bash
-kubectl apply -f k8s/monitoring/
+# Option A : Déploiement manuel
+kubectl apply -f k8s/monitoring/prometheus/
+kubectl apply -f k8s/monitoring/grafana/
+
+# Option B : Via Helm (recommandé)
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
+```
+
+#### Étape 4️⃣ : Déploiement CI/CD (Optionnel)
+
+```bash
+# Jenkins
+helm repo add jenkinsci https://charts.jenkins.io
+helm install jenkins jenkinsci/jenkins -n jenkins
+
+# ArgoCD
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
 
 ---
 
-## 🧪 3. Tests & validation
+## ⚙️ Configuration
 
-### Endpoints Applicatifs
-| Service | URL / Commande | Description |
-|---------|----------------|-------------|
-| **GraphQL Playground** | [http://localhost:4000/graphql](http://localhost:4000/graphql) | Interface interactive pour tester les requêtes |
-| **API Posts** | `curl http://localhost:3020/posts` | API REST directe (interne) |
-| **Chat** | `ws://localhost:8080` | WebSocket pour le chat temps réel |
+### Variables d'Environnement
 
-### Accès Monitoring (Port-Forwarding)
-Pour contourner les restrictions réseau ou les conflits de ports locaux :
+Créez un fichier `.env` à la racine du projet :
 
-**📊 Grafana** (Dashboarding)
+```env
+# Database
+MONGO_URI=mongodb://mongo:27017/socialnetwork
+REDIS_URL=redis://redis:6379
+
+# Kafka
+KAFKA_BROKERS=kafka:9092
+KAFKA_GROUP_ID=social-network-consumers
+
+# JWT
+JWT_SECRET=your-super-secret-key-change-in-production
+JWT_EXPIRY=24h
+
+# Services URLs
+POSTS_SERVICE_URL=http://posts-service:3020
+AUTH_SERVICE_URL=http://auth-service:3010
+CHAT_SERVICE_URL=http://chat-service:8080
+
+# Monitoring
+PROMETHEUS_ENABLED=true
+METRICS_PORT=9090
+```
+
+### Configurer Grafana
+
+1. Accéder à Grafana : `http://localhost:3001`
+2. Identifiants par défaut : `admin / admin`
+3. Ajouter Prometheus comme datasource :
+   - URL : `http://prometheus-server:80`
+4. Importer les dashboards depuis `k8s/monitoring/grafana/dashboards/`
+
+---
+
+## 🧪 Validation & Tests
+
+### Tests de Connectivité
+
+```bash
+# Health checks des services
+curl http://localhost:4000/health    # GraphQL Gateway
+curl http://localhost:3020/health    # Posts Service
+curl http://localhost:8080/health    # Chat Service
+
+# Test GraphQL
+curl -X POST http://localhost:4000/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ posts { id title author } }"}'
+```
+
+### Tests Kubernetes
+
+```bash
+# Vérifier l'état des pods
+kubectl get pods -n social-network
+
+# Vérifier les logs d'un service
+kubectl logs -f deployment/posts-service -n social-network
+
+# Tester la connectivité inter-services
+kubectl run -it --rm debug --image=busybox --restart=Never -- \
+  wget -qO- http://posts-service:3020/health
+```
+
+### Tests de Charge (Optionnel)
+
+```bash
+# Avec Apache Bench
+ab -n 1000 -c 10 http://localhost:4000/graphql
+
+# Avec k6
+k6 run tests/load-test.js
+```
+
+---
+
+## 📊 Monitoring & Observabilité
+
+### Accès aux Outils (Port-Forwarding)
+
+Pour accéder aux interfaces de monitoring depuis votre machine locale :
+
 ```powershell
+# Grafana (Dashboards)
 kubectl port-forward svc/grafana 3001:3000 -n monitoring
-# Accès : http://localhost:3001 (admin/admin)
-```
+# → http://localhost:3001 (admin/admin)
 
-**📈 Prometheus** (Métriques)
-```powershell
+# Prometheus (Métriques brutes)
 kubectl port-forward svc/prometheus-server 9091:80 -n monitoring
-# Accès : http://localhost:9091
+# → http://localhost:9091
+
+# Jenkins (CI/CD)
+kubectl port-forward svc/jenkins 8082:8080 -n jenkins
+# → http://localhost:8082 (admin/admin123)
+
+# ArgoCD (GitOps)
+kubectl port-forward svc/argocd-server 8080:443 -n argocd
+# → https://localhost:8080
 ```
 
-**⚙️ Jenkins** (CI/CD)
-```powershell
-kubectl port-forward svc/jenkins 8082:8080 -n jenkins
-# Accès : http://localhost:8082 (admin/admin123)
+### Dashboards Grafana Disponibles
+
+| Dashboard | Description | ID |
+|-----------|-------------|-----|
+| **Node Metrics** | CPU, RAM, Disk des nodes K8s | 1860 |
+| **Kafka Metrics** | Lag, throughput, partitions | 12483 |
+| **Application Metrics** | Latence, erreurs, requêtes | Custom |
+| **Network Traffic** | Traffic inter-services | 13473 |
+
+### Métriques Clés Exposées
+
+```prometheus
+# Exemples de métriques disponibles
+http_requests_total{service="posts-service", status="200"}
+kafka_consumer_lag{group="notifications", topic="post-created"}
+graphql_query_duration_seconds{operation="getPosts"}
+mongodb_connections_current{database="socialnetwork"}
 ```
 
 ---
 
-## 📸 4. Galerie & Captures
+## 📸 Captures d'Écran
 
-### 🌐 Vue d'ensemble ArgoCD
-Visualisation GitOps de l'état de synchronisation du cluster.
+### 🌐 ArgoCD - GitOps Dashboard
+Synchronisation automatique du cluster avec le repository Git.
+
 ![ArgoCD Dashboard](assets/argocd.png)
 
-### 🖥️ Grafana - Monitoring Node
-Métriques bas niveau (CPU, RAM, I/O) des noeuds du cluster.
+---
+
+### 📊 Grafana - Node Monitoring
+Métriques système des nœuds Kubernetes (CPU, RAM, I/O).
+
 ![Grafana Node Metrics](assets/grafana_node.png)
 
-### 🕸️ Grafana - Réseau
-Analyse du trafic inter-services.
+---
+
+### 🕸️ Grafana - Network Analysis
+Analyse du trafic réseau entre les microservices.
+
 ![Grafana Network Traffic](assets/grafana_network.png)
 
-### 🏗️ Jenkins CI/CD
-Pipeline automatisé de build et déploiement.
+---
+
+### 🔧 Jenkins - Pipeline CI/CD
+Automatisation du build, test et déploiement.
+
 ![Jenkins Dashboard](assets/jenkins.png)
 
-### 🔍 Prometheus
-Exploration des métriques brutes pour le debugging.
+---
+
+### 📈 Prometheus - Metrics Explorer
+Exploration des métriques temps réel pour le debugging.
+
 ![Prometheus Queries](assets/prometheus.png)
 
 ---
 
-## �️ Validation en Ligne de Commande (CLI)
+### 💻 Preuves d'Exécution (CLI)
 
-En plus des interfaces graphiques, voici les preuves de bon fonctionnement via le terminal.
-
-### 1. Construction des Images
-Succès du build Docker Compose pour tous les services.
+#### Docker Build Success
 ![Docker Build](assets/cli_docker_build.png)
 
-### 2. Démarrage des Conteneurs
-Lancement réussi de la stack complète via `docker-compose up -d`.
-![Docker Up](assets/cli_docker_up.png)
+#### Services Running
+![Docker PS](assets/cli_docker_ps_final.png)
 
-### 3. État des Services (Healthcheck)
-Tous les conteneurs passent au statut `healthy` après l'initialisation.
-![Docker PS Final](assets/cli_docker_ps_final.png)
-
-### 4. Tests de Connectivité (Curl)
-Validation manuelle des endpoints de santé pour GraphQL, Posts Service et Prometheus.
+#### Health Checks
 ![Curl Tests](assets/cli_curl_tests.png)
 
-### 5. Mise en place des Tunnels (Port-Forwarding)
-Preuve que les accès sécurisés aux outils de monitoring et CI/CD sont actifs.
-
-**Jenkins (Port 8082)**
-![Port Forward Jenkins](assets/proof_port_jenkins.png)
-
-**Grafana (Port 3001)**
-![Port Forward Grafana](assets/proof_port_grafana.png)
-
-**Prometheus (Port 9091)**
-![Port Forward Prometheus](assets/proof_port_prometheus.png)
+#### Port Forwarding Validation
+| Service | Capture |
+|---------|---------|
+| Jenkins | ![Port Forward Jenkins](assets/proof_port_jenkins.png) |
+| Grafana | ![Port Forward Grafana](assets/proof_port_grafana.png) |
+| Prometheus | ![Port Forward Prometheus](assets/proof_port_prometheus.png) |
 
 ---
 
-## 🔧 Dépannage
+## 🗺️ Roadmap
 
-**Q: Les pods restent en `Pending` ?**
-> R: Vérifiez les ressources allouées à Docker Desktop (Min 4GB RAM recommandés).
+### Phase 1 : Fondations ✅
+- [x] Architecture microservices
+- [x] Communication Kafka
+- [x] Déploiement Kubernetes
+- [x] Monitoring Prometheus/Grafana
 
-**Q: Erreur `CrashLoopBackOff` sur Kafka ?**
-> R: Kafka est sensible. Essayez de redémarrer Zookeeper d'abord : `kubectl rollout restart deployment zookeeper -n social-network`.
+### Phase 2 : Fonctionnalités Avancées 🚧
+- [ ] Service Mesh (Istio)
+- [ ] Distributed Tracing (Jaeger)
+- [ ] Feature Flags (LaunchDarkly)
+- [ ] Rate Limiting & API Gateway (Kong)
 
-**Q: Pas de métriques dans Grafana ?**
-> R: Vérifiez que les "ServiceMonitors" ou les annotations Prometheus sont bien présentes sur les pods : `kubectl get pods -o wide`.
+### Phase 3 : Production Readiness 📋
+- [ ] Backup automatisé (Velero)
+- [ ] Disaster Recovery
+- [ ] Multi-cluster (Federation)
+- [ ] Sécurité renforcée (OPA Policies)
+
+---
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! Voici comment participer :
+
+1. **Fork** le projet
+2. **Créer** une branche feature (`git checkout -b feature/AmazingFeature`)
+3. **Commit** vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** vers la branche (`git push origin feature/AmazingFeature`)
+5. **Ouvrir** une Pull Request
+
+### Standards de Code
+
+- ✅ Tests unitaires requis (coverage > 80%)
+- ✅ Linter : ESLint + Prettier
+- ✅ Commits conventionnels (Conventional Commits)
+- ✅ Documentation des API (OpenAPI/Swagger)
+
+---
+
+## 📄 Licence
+
+Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+---
+
+## 📞 Contact & Support
+
+- **Documentation** : [Wiki du projet](https://github.com/votre-repo/wiki)
+- **Issues** : [GitHub Issues](https://github.com/votre-repo/issues)
+- **Discussions** : [GitHub Discussions](https://github.com/votre-repo/discussions)
+
+---
+
+## 🙏 Remerciements
+
+- Apache Kafka Community
+- Kubernetes SIG
+- Prometheus & Grafana Labs
+- Tous les contributeurs open-source
+
+---
+
+<div align="center">
+  <p>Fait avec ❤️ pour la communauté DevOps</p>
+  <p>⭐ N'hésitez pas à donner une étoile si ce projet vous a aidé !</p>
+</div>
