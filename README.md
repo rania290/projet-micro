@@ -92,7 +92,6 @@ graph TB
         subgraph "Observability Stack"
             Prom[📈 Prometheus<br/>Metrics Collection]
             Graf[📊 Grafana<br/>Dashboards]
-            Loki[📝 Loki<br/>Logs Aggregation]
         end
         
         subgraph "DevOps Tools"
@@ -124,7 +123,6 @@ graph TB
     Prom -.->|Scrape| Posts
     Prom -.->|Scrape| Kafka
     Graf -->|Query| Prom
-    Graf -->|Query| Loki
     
     Jenkins -->|Deploy| ArgoCD
     ArgoCD -->|Sync| Ingress
@@ -170,7 +168,6 @@ graph TB
 | **Redis** | Cache & Sessions | 7.x |
 | **Prometheus** | Métriques | 2.x |
 | **Grafana** | Visualisation | 10.x |
-| **Loki** | Logs centralisés | 2.x |
 
 ---
 
