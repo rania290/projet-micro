@@ -93,6 +93,11 @@ const resolvers = {
 // Create Express app
 const app = express();
 
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 // Create Apollo Server
 const server = new ApolloServer({
   typeDefs,
@@ -110,12 +115,7 @@ async function startServer() {
   await server.start();
   server.applyMiddleware({ app });
 
-  // Prometheus metrics endpoint - MUST be after Apollo middleware
-  app.get('/metrics', async (req, res) => {
-    res.set('Content-Type', register.contentType);
-    res.end(await register.metrics());
-  });
-
+  // No changes needed here as we moved metrics endpoint above for better express handling
   app.listen(PORT, () => {
     console.log(`GraphQL service running at http://localhost:${PORT}${server.graphqlPath}`);
     console.log(`Metrics available at http://localhost:${PORT}/metrics`);
