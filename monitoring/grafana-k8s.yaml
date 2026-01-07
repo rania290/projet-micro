@@ -66,8 +66,7 @@ spec:
           subPath: dashboard-provider.yaml
       volumes:
       - name: grafana-storage
-        persistentVolumeClaim:
-          claimName: grafana-pvc
+        emptyDir: {}
       - name: grafana-datasources
         configMap:
           name: grafana-datasources

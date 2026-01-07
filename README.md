@@ -1,671 +1,227 @@
-# Réseau Social - Architecture Microservices avec DevOps
+# 📱 Réseau Social Microservices
 
-## Vue d'Ensemble
 
-Cette plateforme de réseau social est construite sur une architecture de microservices conteneurisée et déployée avec Docker Compose et Kubernetes. Le projet intègre des pratiques DevOps avancées incluant l'intégration continue, le déploiement continu, et l'observabilité.
+Ce projet est une plateforme de réseau social scalable construite sur une architecture **microservices**. Il démontre l'utilisation de **Docker**, **Kubernetes**, **Kafka** et **GraphQL** pour créer une application résiliente et observable.
 
-### Fonctionnalités
-- Service de publication de posts
-- Service de chat en temps réel
-- API GraphQL unifiée
-- Système de notifications via Kafka
-- Monitoring avec Prometheus et Grafana
+---
 
-### Technologies principales
-- **Backend**: Node.js, Express.js, Apollo Server
-- **Base de données**: MongoDB
-- **Messagerie**: Kafka avec Zookeeper
-- **Conteneurisation**: Docker, Docker Compose
-- **Orchestration**: Kubernetes (via les configurations dans le dossier k8s)
-- **CI/CD**: Jenkins (Jenkinsfile présent)
-- **Monitoring**: Prometheus, Grafana
-- **Infrastructure as Code**: Helm Charts, Kubernetes Manifests
+## 🏗️ Architecture
 
-## Structure du Projet
+Le système est composé de services découplés communiquant de manière asynchrone via Kafka et synchrone via gRPC/REST.
 
+```mermaid
+graph TB
+    Client((Client))
+    
+    subgraph "K8s Cluster"
+        Ingress[Service LoadBalancer]
+        
+        subgraph "API Layer"
+            GraphQL[🚀 GraphQL Gateway<br/>:4000]
+            ChatAPI[💬 Chat Service<br/>:8080]
+        end
+        
+        subgraph "Core Services"
+            Posts[📝 Posts Service<br/>:3020]
+            Auth[🔒 Auth Service]
+        end
+        
+        subgraph "Event Bus"
+            Kafka{Apache Kafka}
+            Zookeeper[Zookeeper]
+        end
+        
+        subgraph "Consumers"
+            Notif[🔔 Notifications]
+            Stories[📱 Stories]
+        end
+        
+        subgraph "Data & Monitoring"
+            Mongo[(MongoDB)]
+            Prom[Prometheus]
+            Graf[Grafana]
+        end
+    end
+
+    Client --> Ingress
+    Ingress --> GraphQL
+    Ingress --> ChatAPI
+    
+    GraphQL --> Posts
+    GraphQL --> Auth
+    
+    Posts --> Kafka
+    ChatAPI --> Kafka
+    
+    Kafka --> Notif
+    Kafka --> Stories
+    
+    Posts --> Mongo
+    ChatAPI --> Mongo
+    Notif --> Mongo
+    
+    Prom -.-> GraphQL
+    Prom -.-> Posts
+    Prom -.-> Kafka
+    Graf --> Prom
 ```
-projet-micro/
-├── .env.example           # Exemple de fichier d'environnement
-├── docker-compose.yml     # Configuration Docker Compose
-├── Jenkinsfile           # Pipeline CI/CD Jenkins
-├── helm/                 # Charts Helm pour le déploiement
-├── k8s/                  # Manifests Kubernetes
-├── monitoring/           # Configuration du monitoring
-├── services/             # Microservices
-│   ├── chat-service/     # Service de messagerie
-│   ├── graphql-service/  # API GraphQL
-│   ├── kafka-consumers/  # Consommateurs Kafka
-│   └── posts-service/    # Service de publications
-└── terraform/            # Infrastructure as Code
-```
 
-## Prérequis
+### Services Principaux
+- **GraphQL Gateway** : Point d'entrée unique aggregeant les données des microservices.
+- **Posts Service** : Gestion des publications, commentaires et likes.
+- **Chat Service** : Messagerie temps réel utilisant gRPC pour la performance.
+- **Kafka Consumers** : Traitement asynchrone pour les notifications et les stories.
 
-- Docker et Docker Compose
-- kubectl (pour Kubernetes)
-- Helm (pour le déploiement des charts)
+---
 
-## Démarrage rapide
+## 📋 1. Prérequis
 
-1. Copiez le fichier d'environnement :
-   ```bash
-   cp .env.example .env
-   ```
+Assurez-vous d'avoir l'environnement suivant prêt :
 
-2. Démarrer les services avec Docker Compose :
-   ```bash
-   docker-compose up -d
-   ```
+| Outil | Version Min | Usage |
+|-------|-------------|-------|
+| **Docker Desktop** | Latest | Runtime conteneur & Cluster K8s local |
+| **kubectl** | Latest | CLI pour interagir avec le cluster |
+| **Helm** | 3.x | Gestionnaire de paquets pour K8s |
+| **Git** | Latest | Gestion de version |
 
-3. Accéder aux services :
-   - API GraphQL: http://localhost:4000/graphql
-   - MongoDB: localhost:27017
-   - Kafka: localhost:9092
-   - Prometheus: http://localhost:9090
-   - Grafana: http://localhost:3000
+---
 
-## Déploiement Kubernetes
+## 🚀 2. Installation & Démarrage
 
-1. Appliquer les configurations Kubernetes :
-   ```bash
-   kubectl apply -f k8s/
-   ```
-
-2. Installer les charts Helm :
-   ```bash
-   helm install social-network ./helm
-   ```
-
-## Vérification
-
-1. Vérifier l'état des pods :
-   ```bash
-   kubectl get pods
-   ```
-
-2. Vérifier les logs d'un service :
-   ```bash
-   kubectl logs -f deployment/<nom-du-service>
-   ```
-
-3. Vérifier l'état des déploiements :
-   ```bash
-   kubectl get deployments
-   ```
-
-## Monitoring
-
-Le projet inclut :
-- Prometheus pour la collecte de métriques
-- Grafana pour la visualisation
-- Configuration des alertes
-
-Accéder à Grafana : http://localhost:3000
-- Identifiants par défaut : admin/admin
-
-## Développement
-
-### Structure d'un service type
-
-Chaque service contient :
-- `src/` - Code source
-- `Dockerfile` - Configuration de l'image Docker
-- `package.json` - Dépendances et scripts
-- `README.md` - Documentation spécifique au service
-
-### Tests
-
-Pour exécuter les tests d'un service :
+### A. Récupération du Projet
 ```bash
-cd services/<nom-du-service>
-npm test
+git clone <votre-url-repo>
+cd projet-micro
 ```
 
-## Licence
-
-Ce projet est sous licence MIT.
-├── jenkins/                  # Fichiers de configuration Jenkins
-├── k8s/                      # Manifests Kubernetes
-│   ├── argocd.yaml           # Configuration ArgoCD
-│   ├── chat-service.yaml     # Service de chat
-│   ├── graphql-service.yaml  # Service GraphQL
-│   ├── kafka-consumers.yaml  # Consommateurs Kafka
-│   ├── kafka.yaml            # Configuration Kafka
-│   ├── mongodb.yaml          # Configuration MongoDB
-│   ├── namespace.yaml        # Définition du namespace
-│   ├── posts-service.yaml    # Service de posts
-│   └── zookeeper.yaml        # Configuration Zookeeper
-├── monitoring/               # Configuration du monitoring
-│   ├── grafana-k8s.yaml      # Déploiement Grafana
-│   ├── prometheus-k8s.yaml   # Déploiement Prometheus
-│   └── prometheus.yml        # Configuration Prometheus
-├── services/                 # Code source des services
-├── .dockerignore             # Fichiers ignorés par Docker
-├── .gitignore               # Fichiers ignorés par Git
-├── deploy-k8s.ps1           # Script de déploiement Kubernetes
-├── docker-compose.yml        # Configuration Docker Compose
-├── Jenkinsfile              # Pipeline CI/CD
-└── README.md                # Ce fichier
-```
-
-## Prérequis
-
-- Docker Desktop avec Kubernetes activé
-- kubectl
-- Helm
-- ArgoCD (optionnel pour GitOps)
-- Un compte Docker Hub
-
-## Démarrage rapide
-
-### 1. Démarrer avec Docker Compose
-
+### B. Démarrage Rapide (Docker Compose)
+Pour un environnement de développement léger sans Kubernetes :
 ```bash
 docker-compose up -d
 ```
 
-### 2. Déploiement sur Kubernetes local
+### C. Déploiement Kubernetes (Production-Like)
+Pour simuler un environnement de production complet :
 
-1. Activer Kubernetes dans Docker Desktop
-2. Appliquer les configurations :
-
+**Étape 1 : Infrastructure (Data & Messaging)**
 ```bash
-# Créer le namespace
-kubectl apply -f k8s/base/namespace.yaml
+kubectl apply -f k8s/base/
+# Attend que Kafka et Mongo soient prêts...
+```
 
-# Déployer les bases de données
-kubectl apply -f k8s/base/mongodb-deployment.yaml
-kubectl apply -f k8s/base/zookeeper-deployment.yaml
-kubectl apply -f k8s/base/kafka-deployment.yaml
-
-# Déployer les services
+**Étape 2 : Microservices**
+```bash
 kubectl apply -f k8s/services/posts-service/deployment.yaml
 kubectl apply -f k8s/services/chat-service/deployment.yaml
 kubectl apply -f k8s/services/graphql-service/deployment.yaml
-kubectl apply -f k8s/services/kafka-consumers/notifications-deployment.yaml
-kubectl apply -f k8s/services/kafka-consumers/stories-deployment.yaml
-
-# Déployer le monitoring
-kubectl apply -f k8s/monitoring/prometheus/prometheus-deployment.yaml
-kubectl apply -f k8s/monitoring/grafana/grafana-deployment.yaml
+kubectl apply -f k8s/services/kafka-consumers/deployment.yaml
 ```
 
-### 3. Accès aux services
-
-- **GraphQL API**: http://localhost:4000/graphql
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000 (admin/admin)
-
-## CI/CD avec Jenkins
-
-Le pipeline Jenkins effectue les étapes suivantes :
-1. Vérification du code source
-2. Installation des dépendances
-3. Exécution des tests
-4. Construction des images Docker
-5. Analyse de sécurité avec Trivy
-6. Push vers Docker Hub
-7. Déploiement sur Kubernetes
-
-## Monitoring et Observabilité
-
-Le projet inclut :
-- **Prometheus** pour la collecte des métriques
-- **Grafana** pour la visualisation
-- Métriques d'application et d'infrastructure
-- Tableaux de bord prédéfinis
-
-## Sécurité
-
-- Analyse des vulnérabilités avec Trivy
-- Séparation des préoccupations avec les namespaces
-- Configuration des limites de ressources
-- Politiques de sécurité réseau
-
-## Dépannage
-
-### Voir les logs des pods
+**Étape 3 : Observabilité (Prometheus & Grafana)**
 ```bash
-kubectl logs -n social-network <pod-name>
+kubectl apply -f k8s/monitoring/
 ```
 
-### Accéder à un shell dans un pod
-```bash
-kubectl exec -it -n social-network <pod-name> -- /bin/bash
+---
+
+## 🧪 3. Tests & validation
+
+### Endpoints Applicatifs
+| Service | URL / Commande | Description |
+|---------|----------------|-------------|
+| **GraphQL Playground** | [http://localhost:4000/graphql](http://localhost:4000/graphql) | Interface interactive pour tester les requêtes |
+| **API Posts** | `curl http://localhost:3020/posts` | API REST directe (interne) |
+| **Chat** | `ws://localhost:8080` | WebSocket pour le chat temps réel |
+
+### Accès Monitoring (Port-Forwarding)
+Pour contourner les restrictions réseau ou les conflits de ports locaux :
+
+**📊 Grafana** (Dashboarding)
+```powershell
+kubectl port-forward svc/grafana 3001:3000 -n monitoring
+# Accès : http://localhost:3001 (admin/admin)
 ```
 
-### Redémarrer un déploiement
-```bash
-kubectl rollout restart deployment -n social-network <deployment-name>
+**📈 Prometheus** (Métriques)
+```powershell
+kubectl port-forward svc/prometheus-server 9091:80 -n monitoring
+# Accès : http://localhost:9091
 ```
 
-## Licence
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
-```
-projet-micro/
-├── services/
-│   ├── posts-service/       # Service REST pour les posts
-│   │   └── app.js
-│   ├── graphql-service/     # Service GraphQL
-│   │   └── server.js
-│   ├── chat-service/        # Service gRPC pour le chat
-│   │   ├── server.js
-│   │   └── chat.proto
-│   └── kafka-consumers/     # Consumers Kafka
-│       ├── stories.js
-│       └── notifications.js
-├── package-lock.json
-├── package.json
-└── .env
+**⚙️ Jenkins** (CI/CD)
+```powershell
+kubectl port-forward svc/jenkins 8082:8080 -n jenkins
+# Accès : http://localhost:8082 (admin/admin123)
 ```
 
+---
 
-## Architecture Technique
-Le système est composé de plusieurs services qui communiquent entre eux via différents protocoles:
-- API Gateway: Point d'entrée principal pour les clients 
-- Service GraphQL: Interface unifiée pour les requêtes de données
-- Service Posts: Gestion des publications et des stories
-- Service Stories: Traitement des événements liés aux stories
-- Service Notifications: Traitement des notifications utilisateur
-- Service Chat: Communication en temps réel via gRPC
-
-Ces services communiquent entre eux principalement via Kafka pour les communications asynchrones événementielles, et utilisent MongoDB comme base de données commune.
-
-```mermaid
-graph TB
-    %% Styles
-    classDef service fill:#2563eb,stroke:#1d4ed8,color:white,rx:10,ry:10;
-    classDef database fill:#059669,stroke:#047857,color:white,rx:10,ry:10;
-    classDef broker fill:#7c3aed,stroke:#6d28d9,color:white,rx:10,ry:10;
-    classDef consumer fill:#ea580c,stroke:#c2410c,color:white,rx:10,ry:10;
-
-    %% Core Services
-    subgraph "API Layer"
-        direction LR
-        Posts["Posts Service<br/>(Express/REST)<br/>:3020"];
-        GraphQL["GraphQL Gateway<br/>(Apollo Server)<br/>:4000"];
-        Chat["Real-time Chat<br/>(gRPC)<br/>:50051"];
-    end
-
-    %% Message Broker
-    subgraph "Event Bus"
-        Kafka["Apache Kafka<br/>Message Broker<br/>:9092"];
-    end
-
-    %% Event Consumers
-    subgraph "Event Processors"
-        direction LR
-        Notifications["Notifications<br/>Consumer"];
-        Stories["Stories<br/>Consumer"];
-    end
-
-    %% Persistence Layer
-    subgraph "Data Store"
-        MongoDB["MongoDB<br/>Document Store<br/>:27017"];
-    end
-
-    %% Relations
-    GraphQL --> |"REST API"| Posts;
-    Posts --> |"Publishes Events"| Kafka;
-    Chat --> |"Publishes Events"| Kafka;
-    
-    Kafka --> |"Consumes Events"| Notifications;
-    Kafka --> |"Consumes Events"| Stories;
-    
-    Posts --> |"CRUD Operations"| MongoDB;
-    Chat --> |"Store Messages"| MongoDB;
-    Notifications --> |"Stores Notifications"| MongoDB;
-    Stories --> |"Manages Stories"| MongoDB;
-
-    %% Apply styles
-    class Posts,GraphQL,Chat service;
-    class MongoDB database;
-    class Kafka broker;
-    class Notifications,Stories consumer;
-```
-
-## Services Détaillés
-
-### 1. Posts Service (Port 3000)
-
-Ce service gère les posts et les stories via une API REST. Il permet de:
-- Créer, lire, commenter et liker des posts
-- Créer et lire des stories éphémères (24h)
-Le service publie des événements sur Kafka pour informer les autres services des activités pertinentes.
-
-#### Points d'API principaux:
-
-- POST /posts: Créer un nouveau post
-- GET /posts: Récupérer tous les posts
-- POST /posts/:id/like: Aimer un post
-- POST /posts/:id/comments: Commenter un post
-- GET /posts/:id/comments: Récupérer les commentaires d'un post
-- POST /stories: Créer une nouvelle story
-- GET /stories: Récupérer toutes les stories actives
-- GET /stories/user/:userId: Récupérer les stories d'un utilisateur spécifique
-
-
-### 2. GraphQL Service (Port 4000)
-Ce service fournit une API GraphQL qui sert de façade pour les autres services. Il offre:
-- Un point d'entrée unifié pour les requêtes clients
-- Des resolvers qui communiquent avec le service Posts via HTTP
-- Une interface structurée pour récupérer les posts et leurs données associées
-
-#### Types GraphQL
-
-##### Post
-- id: ID!
-- content: String!
-- userId: String!
-- likes: Int!
-- comments: [Comment!]!
-- createdAt: String!
-
-##### Comment
-- text: String!
-- userId: String!
-- createdAt: String!
-
-#### Requêtes Disponibles
-- feed(userId: ID!): [Post!]!
-- post(id: ID!): Post
-
-### 3. Chat Service 
-Ce service implémente une API gRPC pour la messagerie en temps réel. Il permet:
-- L'envoi de messages privés entre utilisateurs
-- La souscription en streaming pour recevoir des messages en temps réel
-- La persistance des messages dans MongoDB
-- La publication d'événements de notification via Kafka
-
-### 4. Notification Consumer
-Ce service écoute les événements sur le topic Kafka 'notifications' et crée des notifications dans la base de données. Il traite:
-- Les likes sur les posts
-- Les commentaires sur les posts
-- Les nouveaux messages chat
-
-#### Modèle de Notification
-- Type (LIKE, COMMENT, CHAT_MESSAGE)
-- Émetteur (userId)
-- Destinataire (targetUserId)
-- Références (postId, commentId)
-- État de lecture
-- Horodatage
-
-### 5. Stories Consumer
-
-Ce service gère le cycle de vie des stories éphémères. Il:
-- Écoute les événements sur le topic Kafka 'stories'
-- Traite les événements de création de stories
-- Gère l'expiration des stories (24h après leur création)
-- Publie des notifications pour informer les abonnés des nouvelles stories
-
-#### Modèle de Story
-- Contenu
-- Auteur
-- Date de création
-- Date d'expiration
-
-## Flux de Données
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant G as GraphQL Gateway
-    participant S as Services<br/>(Posts + Chat)
-    participant K as Kafka
-    participant M as MongoDB
-
-    %% Interactions Posts/Stories
-    C->>G: Action utilisateur<br/>(post, like, comment, story)
-    G->>S: REST/gRPC
-    S->>M: Sauvegarder
-    S->>K: Événement
-    K-->>M: Notification
-
-    %% Chat temps réel
-    C->>S: Stream chat (gRPC)
-    S->>M: Message
-    S->>K: Événement
-    K-->>M: Notification
-
-    %% Lecture des données
-    C->>G: Query GraphQL
-    G->>S: Requêtes
-    S->>M: Lecture
-    G->>C: Réponse agrégée
-```
-
-
-## Configuration Technique
-
-### Variables d'Environnement
-Créez un fichier `.env` à la racine du projet avec les variables suivantes :
-
-```env
-# Base de données
-MONGODB_URI=mongodb://localhost:27017/social-network
-
-# Services
-POSTS_SERVICE_PORT=3020
-GRAPHQL_PORT=4000
-CHAT_SERVICE_PORT=50051
-
-# Message Broker
-KAFKA_BROKERS=localhost:9092
-KAFKA_CLIENT_ID=social-network
-
-# Configuration
-STORY_EXPIRATION_HOURS=24
-NODE_ENV=development
-```
-
-### Dépendances Principales
-- Express.js (API REST)
-- Apollo Server (GraphQL)
-- KafkaJS (Message Broker)
-- Mongoose (MongoDB ODM)
-
-## Guide d'Installation
-
-### Prérequis
-- Node.js v16+ 
-- MongoDB 4.4+
-- Apache Kafka 2.8+
-- Zookeeper 3.8+
-- Docker (optionnel)
-
-### Installation et Démarrage
-
-1. **Configuration Initiale**
-   ```bash
-   # Cloner le projet
-   git clone <https://github.com/amalbenalii/projet-micro.git>
-   cd projet-micro
-
-   # Installer les dépendances du projet
-   npm install              # Installe toutes les dépendances listées dans package.json
-
-   ```
-
-2. **Configuration de l'Infrastructure**
-   
-   b. **Apache Kafka**
-   ```bash
-   # Démarrer Zookeeper (Windows)
-   .\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
-
-   # Démarrer Kafka (dans un nouveau terminal)
-   .\bin\windows\kafka-server-start.bat .\config\server.properties
-
-   # Créer les topics nécessaires
-   .\bin\windows\kafka-topics.bat --create --topic notifications --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1
-   .\bin\windows\kafka-topics.bat --create --topic stories --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1
-   ```
-
-4. **Démarrage des Services**
-
-   a. Démarrer le service de posts (http://localhost:3020)
-   ```bash
-   node app.js (dans le répertoire du service Posts)
-   ```
-   b. Démarrer le service GraphQL (http://localhost:4000/graphql)
-   ```bash
-   node server.js (dans le répertoire du service Graphql)
-   ```
-   
-   c. Démarrer le service de chat gRPC (http://localhost:50051)
-   ```bash
-   node server.js  (dans le répertoire du service Chat)
-   # Service de chat en temps réel via gRPC
-   ```
-   
-   d. Démarrer le consumer de notifications  (dans le répertoire du service kafka-consumers)
-   ```bash
-   node notifications.js
-   # Traite les événements de notifications en arrière-plan
-   node stories.js 
-   # Traite les événements de notifications en arrière-plan
-   ```
-
-6. **Services (par ordre)** 
-   - Démarrer le service Posts
-   - Lancer le service GraphQL
-   - Activer les consumers
-
-## Déploiement DevOps
-
-### Prérequis
-- Docker Desktop avec Kubernetes activé
-- Helm 3.x
-- Jenkins (optionnel pour CI/CD)
-- kubectl
-
-### Conteneurisation avec Docker
-
-1. **Construction des images**
-   ```bash
-   docker-compose build
-   ```
-
-2. **Démarrage local**
-   ```bash
-   docker-compose up -d
-   ```
-
-3. **Arrêt**
-   ```bash
-   docker-compose down -v
-   ```
-
-### Déploiement Kubernetes
-
-1. **Création du namespace**
-   ```bash
-   kubectl apply -f kubernetes/namespace.yaml
-   ```
-
-2. **Déploiement avec script**
-   ```powershell
-   .\deploy-k8s.ps1
-   ```
-
-3. **Vérification**
-   ```bash
-   kubectl get pods -n social-network
-   kubectl get services -n social-network
-   ```
-
-### Déploiement avec Helm
-
-1. **Installation du chart**
-   ```bash
-   helm install social-network ./helm/social-network
-   ```
-
-2. **Mise à jour**
-   ```bash
-   helm upgrade social-network ./helm/social-network
-   ```
-
-3. **Désinstallation**
-   ```bash
-   helm uninstall social-network
-   ```
-
-### Intégration Continue avec Jenkins
-
-1. **Configuration Jenkins**
-   - Installer les plugins: Docker, Kubernetes, Trivy
-   - Configurer les credentials Docker Hub
-   - Créer un pipeline avec le Jenkinsfile fourni
-
-2. **Pipeline stages**
-   - Checkout du code
-   - Installation des dépendances
-   - Tests
-   - Construction des images Docker
-   - Scan de sécurité avec Trivy
-   - Push vers Docker Hub
-   - Déploiement Kubernetes
-
-### Monitoring et Observabilité
-
-1. **Déploiement de la stack monitoring**
-   ```powershell
-   .\deploy-monitoring.ps1
-   ```
-
-2. **Accès aux interfaces**
-   - Prometheus: http://localhost:9090
-   - Grafana: http://localhost:3000 (admin/admin)
-
-3. **Configuration Grafana**
-   - Ajouter Prometheus comme source de données
-   - Importer des dashboards pour Kubernetes et applications Node.js
-
-### Tests et Validation
-
-1. **Tests des services**
-   ```bash
-   # GraphQL endpoint
-   curl -X POST http://localhost:4000/graphql \
-     -H "Content-Type: application/json" \
-     -d '{"query": "{ feed(userId: \"1\") { id content userId } }"}'
-   
-   # Posts service
-   curl http://localhost:3020/posts
-   ```
-
-2. **Tests de charge**
-   - Utiliser Apache Bench ou Artillery pour les tests de performance
-
-### Extensions Optionnelles
-
-#### Service Mesh avec Istio
-1. Installer Istio
-2. Annoter les services pour l'injection automatique
-3. Déployer Kiali pour la visualisation
-
-#### Infrastructure as Code avec Terraform
-1. Créer des modules pour provisionner:
-   - Cluster EKS
-   - Registre ECR
-   - Base de données RDS
-
-#### Déploiement sur EKS
-1. Configurer AWS CLI
-2. Utiliser Terraform pour provisionner l'infrastructure
-3. Déployer avec Helm sur EKS
-
-### Dépannage
-
-**Problèmes courants:**
-- Vérifier les logs: `kubectl logs -n social-network <pod-name>`
-- Vérifier les événements: `kubectl get events -n social-network`
-- Vérifier les ressources: `kubectl describe pod -n social-network <pod-name>`
-
-**Debugging:**
-- Port-forwarding: `kubectl port-forward -n social-network svc/graphql-service 4000:4000`
-- Exec dans un pod: `kubectl exec -it -n social-network <pod-name> -- /bin/sh`
+## 📸 4. Galerie & Captures
+
+### 🌐 Vue d'ensemble ArgoCD
+Visualisation GitOps de l'état de synchronisation du cluster.
+![ArgoCD Dashboard](assets/argocd.png)
+
+### 🖥️ Grafana - Monitoring Node
+Métriques bas niveau (CPU, RAM, I/O) des noeuds du cluster.
+![Grafana Node Metrics](assets/grafana_node.png)
+
+### 🕸️ Grafana - Réseau
+Analyse du trafic inter-services.
+![Grafana Network Traffic](assets/grafana_network.png)
+
+### 🏗️ Jenkins CI/CD
+Pipeline automatisé de build et déploiement.
+![Jenkins Dashboard](assets/jenkins.png)
+
+### 🔍 Prometheus
+Exploration des métriques brutes pour le debugging.
+![Prometheus Queries](assets/prometheus.png)
+
+---
+
+## �️ Validation en Ligne de Commande (CLI)
+
+En plus des interfaces graphiques, voici les preuves de bon fonctionnement via le terminal.
+
+### 1. Construction des Images
+Succès du build Docker Compose pour tous les services.
+![Docker Build](assets/cli_docker_build.png)
+
+### 2. Démarrage des Conteneurs
+Lancement réussi de la stack complète via `docker-compose up -d`.
+![Docker Up](assets/cli_docker_up.png)
+
+### 3. État des Services (Healthcheck)
+Tous les conteneurs passent au statut `healthy` après l'initialisation.
+![Docker PS Final](assets/cli_docker_ps_final.png)
+
+### 4. Tests de Connectivité (Curl)
+Validation manuelle des endpoints de santé pour GraphQL, Posts Service et Prometheus.
+![Curl Tests](assets/cli_curl_tests.png)
+
+### 5. Mise en place des Tunnels (Port-Forwarding)
+Preuve que les accès sécurisés aux outils de monitoring et CI/CD sont actifs.
+
+**Jenkins (Port 8082)**
+![Port Forward Jenkins](assets/proof_port_jenkins.png)
+
+**Grafana (Port 3001)**
+![Port Forward Grafana](assets/proof_port_grafana.png)
+
+**Prometheus (Port 9091)**
+![Port Forward Prometheus](assets/proof_port_prometheus.png)
+
+---
+
+## 🔧 Dépannage
+
+**Q: Les pods restent en `Pending` ?**
+> R: Vérifiez les ressources allouées à Docker Desktop (Min 4GB RAM recommandés).
+
+**Q: Erreur `CrashLoopBackOff` sur Kafka ?**
+> R: Kafka est sensible. Essayez de redémarrer Zookeeper d'abord : `kubectl rollout restart deployment zookeeper -n social-network`.
+
+**Q: Pas de métriques dans Grafana ?**
+> R: Vérifiez que les "ServiceMonitors" ou les annotations Prometheus sont bien présentes sur les pods : `kubectl get pods -o wide`.
