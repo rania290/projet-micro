@@ -4,14 +4,11 @@ metadata:
   name: social-network
   namespace: argocd
 spec:
-  project: social-network
+  project: default
   source:
-    repoURL: https://github.com/rania290/projet-micro
+    repoURL: https://github.com/rania290/projet-micro.git
     targetRevision: HEAD
     path: helm/social-network
-    helm:
-      valueFiles:
-        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: social-network
@@ -19,3 +16,5 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

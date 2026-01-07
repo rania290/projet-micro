@@ -1,6 +1,14 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, gql } = require('apollo-server-express');
+const express = require('express');
 const { default: axios } = require('axios');
+const promClient = require('prom-client');
 require('dotenv').config();
+
+// Créer un registre de métriques
+const register = new promClient.Registry();
+
+// Métriques par défaut
+promClient.collectDefaultMetrics({ register });
 
 const POSTS_SERVICE_URL = process.env.POSTS_SERVICE_URL || 'http://localhost:3020';
 
@@ -82,6 +90,9 @@ const resolvers = {
   }
 };
 
+// Create Express app
+const app = express();
+
 // Create Apollo Server
 const server = new ApolloServer({
   typeDefs,
@@ -95,6 +106,20 @@ const server = new ApolloServer({
 // Start the server
 const PORT = process.env.GRAPHQL_SERVICE_PORT || 4000;
 
-server.listen(PORT).then(({ url }) => {
-  console.log(`GraphQL service running at ${url}`);
-});
+async function startServer() {
+  await server.start();
+  server.applyMiddleware({ app });
+
+  // Prometheus metrics endpoint - MUST be after Apollo middleware
+  app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  });
+
+  app.listen(PORT, () => {
+    console.log(`GraphQL service running at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(`Metrics available at http://localhost:${PORT}/metrics`);
+  });
+}
+
+startServer();

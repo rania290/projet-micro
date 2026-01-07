@@ -10,24 +10,72 @@ data:
       evaluation_interval: 15s
 
     scrape_configs:
-      - job_name: 'social-network-services'
+      # Prometheus itself (basic metrics that should always work)
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # Simple node-exporter style metrics (if available)
+      - job_name: 'node'
+        static_configs:
+          - targets: ['node-exporter.monitoring.svc.cluster.local:9100']
+
+      - job_name: 'kube-state-metrics'
+        static_configs:
+          - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
+
+      # Basic Kubernetes metrics using service discovery
+      - job_name: 'kubernetes-services'
         kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - social-network
+          - role: service
         relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            regex: '.*'
-            target_label: service
-            replacement: '$1'
-          - source_labels: [__meta_kubernetes_pod_container_port_number]
-            regex: '.*'
-            target_label: port
-            replacement: '$1'
-          - source_labels: [__meta_kubernetes_pod_ip]
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+            action: replace
+            target_label: __scheme__
+            regex: (https?)
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+            action: replace
             target_label: __address__
-            replacement: '$1:$2'
-          - source_labels: [__meta_kubernetes_pod_container_port_number]
-            target_label: __address__
-            replacement: '$1'
+            regex: (.+?)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: kubernetes_name
+
+      # Application metrics endpoints
+      - job_name: 'chat-service'
+        static_configs:
+          - targets: ['chat-service.social-network.svc.cluster.local:8080']
+        metrics_path: '/metrics'
+
+      - job_name: 'graphql-service'
+        static_configs:
+          - targets: ['graphql-service.social-network.svc.cluster.local:4000']
+        metrics_path: '/metrics'
+
+      - job_name: 'posts-service'
+        static_configs:
+          - targets: ['posts-service.social-network.svc.cluster.local:3020']
+        metrics_path: '/metrics'
+
+      - job_name: 'mongodb'
+        static_configs:
+          - targets: ['mongodb-exporter.social-network.svc.cluster.local:9216']
+        metrics_path: '/metrics'
+
+      - job_name: 'kafka'
+        static_configs:
+          - targets: ['kafka-exporter.social-network.svc.cluster.local:9308']
+        metrics_path: '/metrics'

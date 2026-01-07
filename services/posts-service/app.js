@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { Kafka } = require('kafkajs');
 const cors = require('cors');
+const promClient = require('prom-client');
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+collectDefaultMetrics(); // Collect default metrics
 require('dotenv').config();
 
 const app = express();
@@ -12,10 +15,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/social-network', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/social-network');
 
 mongoose.connection.on('connected', () => {
     console.log('Connected to MongoDB');
@@ -43,8 +43,8 @@ const StorySchema = new mongoose.Schema({
     userId: { type: String, required: true },
     content: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
-    expiresAt: { 
-        type: Date, 
+    expiresAt: {
+        type: Date,
         default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
     }
 });
@@ -69,6 +69,17 @@ const Post = mongoose.model('Post', PostSchema);
 // Route de santé pour le healthcheck Docker
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', service: 'posts-service' });
+});
+
+// Prometheus metrics endpoint
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+    try {
+        res.set('Content-Type', promClient.register.contentType);
+        res.end(await promClient.register.metrics());
+    } catch (err) {
+        res.status(500).end(err);
+    }
 });
 
 // Routes
@@ -125,7 +136,7 @@ app.post('/posts/:id/like', async (req, res) => {
     try {
         const { userId } = req.body;
         const post = await Post.findById(req.params.id);
-        
+
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
@@ -158,7 +169,7 @@ app.post('/posts/:id/comments', async (req, res) => {
     try {
         const { text, userId } = req.body;
         const post = await Post.findById(req.params.id);
-        
+
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
@@ -257,13 +268,13 @@ async function startServer() {
         } catch (error) {
             retryCount++;
             console.error(`Failed to connect to Kafka: ${error.message}`);
-            
+
             if (retryCount >= maxRetries) {
                 console.error('Max retries reached. Starting server without Kafka connection.');
                 break;
             }
-            
-            console.log(`Retrying in ${retryDelay/1000} seconds...`);
+
+            console.log(`Retrying in ${retryDelay / 1000} seconds...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
         }
     }

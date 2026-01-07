@@ -2,32 +2,128 @@
 
 ## Vue d'Ensemble
 
-Cette plateforme de réseau social est construite sur une architecture de microservices conteneurisée et déployée sur Kubernetes. Le projet intègre des pratiques DevOps avancées incluant l'intégration continue, le déploiement continu, et l'observabilité.
+Cette plateforme de réseau social est construite sur une architecture de microservices conteneurisée et déployée avec Docker Compose et Kubernetes. Le projet intègre des pratiques DevOps avancées incluant l'intégration continue, le déploiement continu, et l'observabilité.
 
 ### Fonctionnalités
-- Partage de posts et stories éphémères
-- Chat en temps réel
-- Système de notifications
+- Service de publication de posts
+- Service de chat en temps réel
 - API GraphQL unifiée
+- Système de notifications via Kafka
 - Monitoring avec Prometheus et Grafana
 
 ### Technologies principales
-- **Backend**: Node.js, Express.js, Apollo Server, gRPC
-- **Base de données**: MongoDB avec Mongoose
+- **Backend**: Node.js, Express.js, Apollo Server
+- **Base de données**: MongoDB
 - **Messagerie**: Kafka avec Zookeeper
 - **Conteneurisation**: Docker, Docker Compose
-- **Orchestration**: Kubernetes (Docker Desktop)
-- **CI/CD**: Jenkins avec intégration Docker Hub
-- **Sécurité**: Analyse de vulnérabilités avec Trivy
+- **Orchestration**: Kubernetes (via les configurations dans le dossier k8s)
+- **CI/CD**: Jenkins (Jenkinsfile présent)
 - **Monitoring**: Prometheus, Grafana
 - **Infrastructure as Code**: Helm Charts, Kubernetes Manifests
 
-## Structure du Projet DevOps
+## Structure du Projet
 
 ```
 projet-micro/
-├── .github/                   # Fichiers de configuration GitHub
-├── helm/                     # Charts Helm pour le déploiement
+├── .env.example           # Exemple de fichier d'environnement
+├── docker-compose.yml     # Configuration Docker Compose
+├── Jenkinsfile           # Pipeline CI/CD Jenkins
+├── helm/                 # Charts Helm pour le déploiement
+├── k8s/                  # Manifests Kubernetes
+├── monitoring/           # Configuration du monitoring
+├── services/             # Microservices
+│   ├── chat-service/     # Service de messagerie
+│   ├── graphql-service/  # API GraphQL
+│   ├── kafka-consumers/  # Consommateurs Kafka
+│   └── posts-service/    # Service de publications
+└── terraform/            # Infrastructure as Code
+```
+
+## Prérequis
+
+- Docker et Docker Compose
+- kubectl (pour Kubernetes)
+- Helm (pour le déploiement des charts)
+
+## Démarrage rapide
+
+1. Copiez le fichier d'environnement :
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Démarrer les services avec Docker Compose :
+   ```bash
+   docker-compose up -d
+   ```
+
+3. Accéder aux services :
+   - API GraphQL: http://localhost:4000/graphql
+   - MongoDB: localhost:27017
+   - Kafka: localhost:9092
+   - Prometheus: http://localhost:9090
+   - Grafana: http://localhost:3000
+
+## Déploiement Kubernetes
+
+1. Appliquer les configurations Kubernetes :
+   ```bash
+   kubectl apply -f k8s/
+   ```
+
+2. Installer les charts Helm :
+   ```bash
+   helm install social-network ./helm
+   ```
+
+## Vérification
+
+1. Vérifier l'état des pods :
+   ```bash
+   kubectl get pods
+   ```
+
+2. Vérifier les logs d'un service :
+   ```bash
+   kubectl logs -f deployment/<nom-du-service>
+   ```
+
+3. Vérifier l'état des déploiements :
+   ```bash
+   kubectl get deployments
+   ```
+
+## Monitoring
+
+Le projet inclut :
+- Prometheus pour la collecte de métriques
+- Grafana pour la visualisation
+- Configuration des alertes
+
+Accéder à Grafana : http://localhost:3000
+- Identifiants par défaut : admin/admin
+
+## Développement
+
+### Structure d'un service type
+
+Chaque service contient :
+- `src/` - Code source
+- `Dockerfile` - Configuration de l'image Docker
+- `package.json` - Dépendances et scripts
+- `README.md` - Documentation spécifique au service
+
+### Tests
+
+Pour exécuter les tests d'un service :
+```bash
+cd services/<nom-du-service>
+npm test
+```
+
+## Licence
+
+Ce projet est sous licence MIT.
 ├── jenkins/                  # Fichiers de configuration Jenkins
 ├── k8s/                      # Manifests Kubernetes
 │   ├── argocd.yaml           # Configuration ArgoCD

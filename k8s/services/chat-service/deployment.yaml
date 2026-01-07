@@ -20,6 +20,7 @@ spec:
         image: rania290/projet-micro-chat-service:latest
         ports:
         - containerPort: 50051
+        - containerPort: 8080
         env:
         - name: MONGODB_URI
           value: "mongodb://admin:password@mongodb:27017/social-network?authSource=admin"

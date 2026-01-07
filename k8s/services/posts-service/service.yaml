@@ -5,6 +5,10 @@ metadata:
   namespace: social-network
   labels:
     app: posts-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3020"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: posts-service

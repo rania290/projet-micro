@@ -81,8 +81,8 @@ mongodb:
 zookeeper:
   enabled: true
   image:
-    repository: zookeeper
-    tag: "latest"
+    repository: bitnami/zookeeper
+    tag: "3.9"
     pullPolicy: IfNotPresent
   
   # Authentication
@@ -106,8 +106,8 @@ zookeeper:
 kafka:
   enabled: true
   image:
-    repository: apache/kafka
-    tag: "latest"
+    repository: bitnami/kafka
+    tag: "3.6"
     pullPolicy: IfNotPresent
   
   # Replica count

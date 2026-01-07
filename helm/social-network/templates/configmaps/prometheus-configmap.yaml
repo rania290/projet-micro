@@ -21,22 +21,26 @@ data:
           - targets: ['localhost:9090']
 
       - job_name: 'posts-service'
+        metrics_path: '/metrics'
         static_configs:
           - targets: ['{{ include "social-network.fullname" . }}-posts-service:{{ .Values.postsService.port }}']
 
       - job_name: 'graphql-service'
+        metrics_path: '/metrics'
         static_configs:
           - targets: ['{{ include "social-network.fullname" . }}-graphql-service:{{ .Values.graphqlService.port }}']
 
       - job_name: 'chat-service'
         metrics_path: '/metrics'
         static_configs:
-          - targets: ['{{ include "social-network.fullname" . }}-chat-service:{{ .Values.chatService.port }}']
+          - targets: ['{{ include "social-network.fullname" . }}-chat-service:{{ .Values.chatService.metricsPort }}']
 
       - job_name: 'mongodb'
+        metrics_path: '/metrics'
         static_configs:
-          - targets: ['{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.port }}']
+          - targets: ['{{ include "social-network.fullname" . }}-mongodb:9216']
 
       - job_name: 'kafka'
+        metrics_path: '/metrics'
         static_configs:
-          - targets: ['{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}']
+          - targets: ['{{ include "social-network.fullname" . }}-kafka:9308']

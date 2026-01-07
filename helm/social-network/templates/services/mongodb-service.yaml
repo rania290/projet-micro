@@ -8,10 +8,14 @@ metadata:
 spec:
   type: {{ .Values.mongodb.service.type }}
   ports:
-  - port: {{ .Values.mongodb.port }}
-    targetPort: {{ .Values.mongodb.port }}
+  - port: {{ .Values.mongodb.service.port }}
+    targetPort: {{ .Values.mongodb.service.port }}
     protocol: TCP
     name: mongodb
+  - port: 9216
+    targetPort: 9216
+    protocol: TCP
+    name: metrics
   selector:
     {{- include "social-network.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: mongodb

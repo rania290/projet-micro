@@ -5,10 +5,18 @@ metadata:
   namespace: social-network
   labels:
     app: chat-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: chat-service
   ports:
   - port: 50051
     targetPort: 50051
+    name: grpc
+  - port: 8080
+    targetPort: 8080
+    name: metrics
   type: ClusterIP

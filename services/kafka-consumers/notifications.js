@@ -13,8 +13,6 @@ const logger = {
 const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/social-network', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000
         });
@@ -27,38 +25,38 @@ const connectDB = async () => {
 
 // Notification Schema with indexes
 const NotificationSchema = new mongoose.Schema({
-    type: { 
-        type: String, 
+    type: {
+        type: String,
         required: true,
         enum: ['LIKE', 'COMMENT', 'CHAT_MESSAGE', 'STORY_CREATED'],
-        index: true 
+        index: true
     },
-    userId: { 
-        type: String, 
-        required: true,
-        index: true 
-    },
-    targetUserId: { 
-        type: String, 
-        required: true,
-        index: true 
-    },
-    postId: { 
+    userId: {
         type: String,
-        index: true 
+        required: true,
+        index: true
+    },
+    targetUserId: {
+        type: String,
+        required: true,
+        index: true
+    },
+    postId: {
+        type: String,
+        index: true
     },
     commentText: String,
-    messageId: { 
+    messageId: {
         type: String,
-        index: true 
+        index: true
     },
-    read: { 
-        type: Boolean, 
+    read: {
+        type: Boolean,
         default: false,
-        index: true 
+        index: true
     },
-    createdAt: { 
-        type: Date, 
+    createdAt: {
+        type: Date,
         default: Date.now,
         index: { expires: '30d' } // Auto-delete after 30 days
     }
@@ -86,7 +84,7 @@ const kafka = new Kafka({
     }
 });
 
-const consumer = kafka.consumer({ 
+const consumer = kafka.consumer({
     groupId: 'notification-group',
     sessionTimeout: 30000, // 30 seconds
     heartbeatInterval: 10000, // 10 seconds
@@ -100,7 +98,7 @@ const consumer = kafka.consumer({
 // Graceful shutdown handler
 const shutdown = async (signal) => {
     logger.info(`Received ${signal}. Starting graceful shutdown...`);
-    
+
     try {
         await Promise.all([
             consumer.disconnect(),
@@ -123,7 +121,7 @@ const shutdown = async (signal) => {
 const processNotification = async (message) => {
     try {
         const data = JSON.parse(message.value.toString());
-        logger.info('Processing notification', { 
+        logger.info('Processing notification', {
             type: data.type,
             userId: data.userId,
             targetUserId: data.targetUserId
@@ -144,9 +142,9 @@ const processNotification = async (message) => {
             messageId: data.messageId,
             content: data.content // For STORY_CREATED
         });
-        
+
         await notification.save();
-        
+
         // Format notification message based on type
         let notificationMessage = '';
         switch (data.type) {
@@ -193,13 +191,13 @@ const runConsumer = async () => {
     try {
         // Connect to MongoDB
         await connectDB();
-        
+
         // Connect to Kafka
         logger.info('Connecting to Kafka...');
         await consumer.connect();
-        
+
         // Subscribe to topics
-        await consumer.subscribe({ 
+        await consumer.subscribe({
             topic: 'notifications',
             fromBeginning: false // Only consume new messages
         });

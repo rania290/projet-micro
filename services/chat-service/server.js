@@ -2,6 +2,10 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const { Kafka } = require('kafkajs');
 const mongoose = require('mongoose');
+const express = require('express');
+const promClient = require('prom-client');
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+collectDefaultMetrics();
 const path = require('path');
 require('dotenv').config();
 
@@ -19,10 +23,7 @@ const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 const { chat } = protoDescriptor;
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/social-network', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/social-network');
 
 mongoose.connection.on('connected', () => {
     console.log('Connected to MongoDB from chat-service');
@@ -60,7 +61,7 @@ const chatService = {
     SendMessage: async (call, callback) => {
         try {
             const { text, userId, targetUserId } = call.request;
-            
+
             // Save message to MongoDB
             const message = new Message({
                 text,
@@ -94,7 +95,7 @@ const chatService = {
                 });
             }
 
-            callback(null, { 
+            callback(null, {
                 success: true,
                 messageId: message._id.toString()
             });
@@ -133,13 +134,13 @@ async function startServer() {
         } catch (error) {
             retryCount++;
             console.error(`Failed to connect to Kafka: ${error.message}`);
-            
+
             if (retryCount >= maxRetries) {
                 console.error('Max retries reached. Starting server without Kafka connection.');
                 break;
             }
-            
-            console.log(`Retrying in ${retryDelay/1000} seconds...`);
+
+            console.log(`Retrying in ${retryDelay / 1000} seconds...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
         }
     }
@@ -160,6 +161,23 @@ async function startServer() {
             console.log(`gRPC Chat service running on port ${port}`);
         }
     );
+
+    // Start HTTP server for metrics
+    const httpPort = process.env.CHAT_METRICS_PORT || 8080;
+    const app = express();
+
+    app.get('/metrics', async (req, res) => {
+        res.set('Content-Type', promClient.register.contentType);
+        res.end(await promClient.register.metrics());
+    });
+
+    app.get('/health', (req, res) => {
+        res.status(200).json({ status: 'ok' });
+    });
+
+    app.listen(httpPort, '0.0.0.0', () => {
+        console.log(`Metrics server running on port ${httpPort}`);
+    });
 }
 
 startServer().catch(console.error);

@@ -12,8 +12,6 @@ const logger = {
 const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://mongodb:27017/social-network', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000
         });
@@ -29,8 +27,8 @@ const StorySchema = new mongoose.Schema({
     userId: { type: String, required: true, index: true },
     content: { type: String, required: true },
     createdAt: { type: Date, default: Date.now, index: { expires: '24h' } },
-    expiresAt: { 
-        type: Date, 
+    expiresAt: {
+        type: Date,
         default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         index: { expires: 0 } // TTL index
     }
@@ -52,7 +50,7 @@ const kafka = new Kafka({
     }
 });
 
-const consumer = kafka.consumer({ 
+const consumer = kafka.consumer({
     groupId: 'story-group',
     sessionTimeout: 30000, // 30 seconds
     heartbeatInterval: 10000, // 10 seconds
@@ -71,7 +69,7 @@ const producer = kafka.producer({
 // Graceful shutdown handler
 const shutdown = async (signal) => {
     logger.info(`Received ${signal}. Starting graceful shutdown...`);
-    
+
     try {
         await Promise.all([
             consumer.disconnect(),
@@ -104,9 +102,9 @@ const processMessage = async (message) => {
                     content: data.content,
                     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
                 });
-                
+
                 await story.save();
-                logger.info('Story created successfully', { 
+                logger.info('Story created successfully', {
                     storyId: story._id,
                     userId: data.userId,
                     contentLength: data.content.length
@@ -156,16 +154,16 @@ const runConsumer = async () => {
     try {
         // Connect to MongoDB
         await connectDB();
-        
+
         // Connect to Kafka
         logger.info('Connecting to Kafka...');
         await Promise.all([
             consumer.connect(),
             producer.connect()
         ]);
-        
+
         // Subscribe to topics
-        await consumer.subscribe({ 
+        await consumer.subscribe({
             topic: 'stories',
             fromBeginning: false // Only consume new messages
         });

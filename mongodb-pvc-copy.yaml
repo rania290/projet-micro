@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"mongodb-pvc","namespace":"social-network"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}
+    pv.kubernetes.io/bind-completed: "yes"
+    pv.kubernetes.io/bound-by-controller: "yes"
+    volume.beta.kubernetes.io/storage-provisioner: docker.io/hostpath
+    volume.kubernetes.io/storage-provisioner: docker.io/hostpath
+  creationTimestamp: "2025-12-30T10:40:20Z"
+  finalizers:
+  - kubernetes.io/pvc-protection
+  name: mongodb-pvc
+  namespace: social-network
+  resourceVersion: "500003"
+  uid: 6d0f44ca-32d4-4db2-9a6a-d688097d5b7e
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: hostpath
+  volumeMode: Filesystem
+  volumeName: pvc-6d0f44ca-32d4-4db2-9a6a-d688097d5b7e
+status:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  phase: Bound

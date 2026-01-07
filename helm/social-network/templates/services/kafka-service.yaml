@@ -8,10 +8,14 @@ metadata:
 spec:
   type: {{ .Values.kafka.service.type }}
   ports:
-  - port: {{ .Values.kafka.port }}
-    targetPort: {{ .Values.kafka.port }}
+  - port: {{ .Values.kafka.service.port }}
+    targetPort: {{ .Values.kafka.service.port }}
     protocol: TCP
     name: kafka
+  - port: 9308
+    targetPort: 9308
+    protocol: TCP
+    name: metrics
   selector:
     {{- include "social-network.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: kafka
