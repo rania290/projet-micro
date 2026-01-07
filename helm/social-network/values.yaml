@@ -51,7 +51,7 @@ mongodb:
   # Authentication
   auth:
     enabled: true
-    rootUser: admin
+    rootUsername: admin
     rootPassword: password
     username: socialuser
     password: socialpass
@@ -81,8 +81,8 @@ mongodb:
 zookeeper:
   enabled: true
   image:
-    repository: bitnami/zookeeper
-    tag: "3.9"
+    repository: zookeeper
+    tag: "latest"
     pullPolicy: IfNotPresent
   
   # Authentication
@@ -106,8 +106,8 @@ zookeeper:
 kafka:
   enabled: true
   image:
-    repository: bitnami/kafka
-    tag: "3.6"
+    repository: apache/kafka
+    tag: "latest"
     pullPolicy: IfNotPresent
   
   # Replica count
@@ -252,9 +252,9 @@ argocd:
 postsService:
   enabled: true
   image:
-    repository: projet-micro-posts-service
-    tag: "latest"
-  replicaCount: 2
+    repository: rania290/projet-micro-posts-service
+    tag: "local"
+  replicaCount: 1
   port: 3020
   service:
     type: ClusterIP
@@ -271,9 +271,9 @@ postsService:
 graphqlService:
   enabled: true
   image:
-    repository: projet-micro-graphql-service
-    tag: "latest"
-  replicaCount: 2
+    repository: rania290/projet-micro-graphql-service
+    tag: "local"
+  replicaCount: 1
   port: 4000
   service:
     type: LoadBalancer
@@ -290,10 +290,11 @@ graphqlService:
 chatService:
   enabled: true
   image:
-    repository: projet-micro-chat-service
-    tag: "latest"
-  replicaCount: 2
+    repository: rania290/projet-micro-chat-service
+    tag: "local"
+  replicaCount: 1
   port: 50051
+  metricsPort: 8080
   service:
     type: ClusterIP
     port: 50051
@@ -309,8 +310,8 @@ chatService:
 kafkaConsumers:
   enabled: true
   image:
-    repository: projet-micro-kafka-consumers
-    tag: "latest"
+    repository: rania290/projet-micro-kafka-consumers
+    tag: "local"
   replicaCount: 1
   resources:
     requests:
