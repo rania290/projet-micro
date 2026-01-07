@@ -48,11 +48,10 @@ spec:
           periodSeconds: 5
       - name: kafka-exporter
         image: danielqsj/kafka-exporter:latest
+        args:
+          - --kafka.server=127.0.0.1:{{ .Values.kafka.service.port }}
         ports:
         - containerPort: 9308
-        env:
-        - name: KAFKA_SERVER
-          value: "localhost:{{ .Values.kafka.service.port }}"
         resources:
           requests:
             memory: "64Mi"

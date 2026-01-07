@@ -28,17 +28,21 @@ spec:
           value: "http://{{ include "social-network.fullname" . }}-posts-service:{{ .Values.postsService.port }}"
         - name: GRAPHQL_SERVICE_PORT
           value: "{{ .Values.graphqlService.port }}"
+        - name: MONGODB_URI
+          value: "mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin"
+        - name: KAFKA_BROKERS
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
         resources:
           {{- toYaml .Values.graphqlService.resources | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /.well-known/apollo/server-health
             port: {{ .Values.graphqlService.port }}
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /.well-known/apollo/server-health
             port: {{ .Values.graphqlService.port }}
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10

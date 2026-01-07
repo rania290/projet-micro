@@ -25,9 +25,9 @@ spec:
         - containerPort: {{ .Values.postsService.port }}
         env:
         - name: MONGODB_URI
-          value: {{ .Values.global.mongodb.uri }}
+          value: "mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin"
         - name: KAFKA_BROKERS
-          value: {{ .Values.global.kafka.brokers }}
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
         - name: POSTS_SERVICE_PORT
           value: "{{ .Values.postsService.port }}"
         resources:
@@ -36,11 +36,11 @@ spec:
           httpGet:
             path: /posts
             port: {{ .Values.postsService.port }}
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /posts
             port: {{ .Values.postsService.port }}
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10

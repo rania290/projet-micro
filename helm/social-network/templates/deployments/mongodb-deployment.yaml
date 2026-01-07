@@ -56,7 +56,7 @@ spec:
         - containerPort: 9216
         env:
         - name: MONGODB_URI
-          value: mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@localhost:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin
+          value: mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@127.0.0.1:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin
         resources:
           requests:
             memory: "64Mi"

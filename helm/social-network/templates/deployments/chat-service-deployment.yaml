@@ -26,7 +26,9 @@ spec:
         - containerPort: {{ .Values.chatService.metricsPort }}
         env:
         - name: KAFKA_BROKERS
-          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}"
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
+        - name: MONGODB_URI
+          value: "mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin"
         - name: CHAT_SERVICE_PORT
           value: "{{ .Values.chatService.port }}"
         - name: CHAT_SERVICE_METRICS_PORT
@@ -34,12 +36,12 @@ spec:
         resources:
           {{- toYaml .Values.chatService.resources | nindent 10 }}
         livenessProbe:
-          grpc:
-            port: {{ .Values.chatService.port }}
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          tcpSocket:
+            port: {{ .Values.chatService.metricsPort }}
+          initialDelaySeconds: 60
+          periodSeconds: 20
         readinessProbe:
-          grpc:
-            port: {{ .Values.chatService.port }}
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          tcpSocket:
+            port: {{ .Values.chatService.metricsPort }}
+          initialDelaySeconds: 15
+          periodSeconds: 10

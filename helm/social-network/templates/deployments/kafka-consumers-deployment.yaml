@@ -23,9 +23,9 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: KAFKA_BROKERS
-          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.port }}"
+          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
         - name: MONGODB_URI
-          value: "mongodb://{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.port }}"
+          value: "mongodb://{{ .Values.mongodb.auth.rootUsername }}:{{ .Values.mongodb.auth.rootPassword }}@{{ include "social-network.fullname" . }}-mongodb:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}?authSource=admin"
         resources:
           {{- toYaml .Values.kafkaConsumers.resources | nindent 10 }}
         livenessProbe:
@@ -34,7 +34,7 @@ spec:
             - node
             - -e
             - "console.log('Health check')"
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 30
         readinessProbe:
           exec:
@@ -42,5 +42,5 @@ spec:
             - node
             - -e
             - "console.log('Readiness check')"
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
