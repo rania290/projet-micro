@@ -63,4 +63,4 @@ spec:
       volumes:
       - name: kafka-storage
         persistentVolumeClaim:
-          claimName: kafka-pvc
+          claimName: {{ include "social-network.fullname" . }}-kafka-pvc

@@ -37,7 +37,7 @@ spec:
         livenessProbe:
           exec:
             command:
-              - mongo
+              - mongosh
               - --eval
               - "db.adminCommand('ping')"
           initialDelaySeconds: 30
@@ -45,7 +45,7 @@ spec:
         readinessProbe:
           exec:
             command:
-              - mongo
+              - mongosh
               - --eval
               - "db.adminCommand('ping')"
           initialDelaySeconds: 5
@@ -67,9 +67,9 @@ spec:
       volumes:
       - name: mongodb-storage
         persistentVolumeClaim:
-          claimName: mongodb-pvc
+          claimName: {{ include "social-network.fullname" . }}-mongodb-pvc
       {{- if .Values.mongodb.persistence.enabled }}
       - name: mongodb-pvc
         persistentVolumeClaim:
-          claimName: mongodb-pvc
+          claimName: {{ include "social-network.fullname" . }}-mongodb-pvc
       {{- end }}
