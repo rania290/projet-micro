@@ -52,7 +52,7 @@ spec:
         - containerPort: 9308
         env:
         - name: KAFKA_SERVER
-          value: "{{ include "social-network.fullname" . }}-kafka:{{ .Values.kafka.service.port }}"
+          value: "localhost:{{ .Values.kafka.service.port }}"
         resources:
           requests:
             memory: "64Mi"
