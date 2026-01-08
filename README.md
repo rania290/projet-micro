@@ -531,10 +531,3 @@ Les contributions sont les bienvenues ! Voici comment participer :
 
 Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
-
----
-
-<div align="center">
-  <p>Fait avec ❤️ pour la communauté DevOps</p>
-  <p>⭐ N'hésitez pas à donner une étoile si ce projet vous a aidé !</p>
-</div>
